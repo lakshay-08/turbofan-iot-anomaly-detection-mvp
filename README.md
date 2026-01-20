@@ -25,6 +25,8 @@ This project demonstrates an IoT-based predictive maintenance pipeline using the
 ---
 
 ## 🏗 Architecture
+
+![Initial HLD](docs/Turbofan_HLD.png)
 **Hot Path**:  
 Simulator → MQTT → Kafka → Stream Processing → Features → Model → Alerts → Redis → React Dashboard
 
