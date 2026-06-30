@@ -6,7 +6,7 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 RAW_DIR = PROJECT_ROOT / "storage" / "raw" / "nasa_cmaps"
-PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
+PROCESSED_DIR = PROJECT_ROOT / "data" / "processed" / "train"
 
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -20,20 +20,12 @@ DATASETS = [
 
 HEALTHY_CYCLES = 50
 
-# =====================================================
-# COLUMN NAMES
-# =====================================================
-
 COLUMNS = (
     ["engine_id", "cycle"]
     + [f"setting_{i}" for i in range(1, 4)]
     + [f"sensor_{i}" for i in range(1, 22)]
 )
 
-
-# =====================================================
-# HELPERS
-# =====================================================
 
 def label_health(rul):
     if rul > 120:
@@ -89,10 +81,6 @@ def create_train_dataset(df):
     return df
 
 
-# =====================================================
-# MAIN PROCESSING
-# =====================================================
-
 def process_dataset(dataset):
 
     print(f"\n{'=' * 60}")
@@ -105,23 +93,13 @@ def process_dataset(dataset):
         print(f"Missing file: {train_file}")
         return
 
-    # -----------------------------
-    # Load train data
-    # -----------------------------
-
     train_df = load_train_file(train_file)
 
     print("Raw Shape:", train_df.shape)
 
-    # -----------------------------
-    # Create RUL dataset
-    # -----------------------------
 
     processed_df = create_train_dataset(train_df)
 
-    # -----------------------------
-    # Save processed dataset
-    # -----------------------------
 
     processed_output = (
         PROCESSED_DIR /
@@ -133,9 +111,6 @@ def process_dataset(dataset):
         index=False
     )
 
-    # -----------------------------
-    # Save healthy baseline data
-    # -----------------------------
 
     healthy_df = processed_df[
         processed_df["cycle"] <= HEALTHY_CYCLES
@@ -150,10 +125,6 @@ def process_dataset(dataset):
         healthy_output,
         index=False
     )
-
-    # -----------------------------
-    # Summary
-    # -----------------------------
 
     print(f"Saved: {processed_output.name}")
     print(f"Saved: {healthy_output.name}")
@@ -172,10 +143,6 @@ def process_dataset(dataset):
         .to_string()
     )
 
-
-# =====================================================
-# ENTRYPOINT
-# =====================================================
 
 if __name__ == "__main__":
 
