@@ -207,6 +207,7 @@ services:
     working_dir: /app
     volumes:
       - ./backend:/app
+      - ./artifacts:/artifacts
     environment:
       API_PORT: 5000
       REDIS_HOST: redis
@@ -215,8 +216,8 @@ services:
     ports:
       - "5000:5000"
     command: >
-      sh -c "echo 'backend api placeholder running';
-      while true; do sleep 3600; done"
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
+      uvicorn app:app --host 0.0.0.0 --port 5000"
     depends_on:
       - kafka
       - redis
