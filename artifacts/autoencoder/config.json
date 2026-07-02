@@ -1,0 +1,26 @@
+{
+  "activation": "relu",
+  "batch_size": 64,
+  "encoder_units": [
+    64,
+    32,
+    16
+  ],
+  "epochs": 100,
+  "feature_columns": [
+    "sensor_11",
+    "sensor_4",
+    "sensor_13",
+    "sensor_8",
+    "sensor_17",
+    "sensor_3",
+    "sensor_2",
+    "sensor_9"
+  ],
+  "input_dim": 8,
+  "learning_rate": 0.001,
+  "model_name": "turbofan_autoencoder",
+  "output_activation": "linear",
+  "random_state": 42,
+  "validation_fraction": 0.15
+}
