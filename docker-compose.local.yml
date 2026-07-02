@@ -1,0 +1,352 @@
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: turbofan-mqtt-broker
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.3
+    container_name: turbofan-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.3
+    container_name: turbofan-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: turbofan-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: turbofan-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  simulator:
+    image: python:3.11-slim
+    container_name: turbofan-simulator
+    working_dir: /app
+    volumes:
+      - ./simulator:/app
+    environment:
+      MQTT_HOST: mqtt-broker
+      MQTT_PORT: 1883
+      MQTT_TOPIC: turbofan/telemetry
+      SIM_ENGINES: 4
+      SIM_INTERVAL: 0.5
+    command: >
+      sh -c "echo 'simulator service placeholder running';
+      while true; do sleep 3600; done"
+    depends_on:
+      - mqtt-broker
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  ingest-mqtt-to-kafka:
+    image: python:3.11-slim
+    container_name: turbofan-ingest-mqtt-to-kafka
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      MQTT_BROKER: mqtt-broker
+      MQTT_PORT: 1883
+      MQTT_TOPIC: turbofan/telemetry
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: turbofan.raw.telemetry
+    command: >
+      sh -c "echo 'mqtt-to-kafka ingestion placeholder running';
+      while true; do sleep 3600; done"
+    depends_on:
+      - mqtt-broker
+      - kafka
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  stream-processor:
+    image: python:3.11-slim
+    container_name: turbofan-stream-processor
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_INPUT_TOPIC: turbofan.raw.telemetry
+      KAFKA_OUTPUT_TOPIC: turbofan.features
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    command: >
+      sh -c "echo 'stream processor placeholder running';
+      while true; do sleep 3600; done"
+    depends_on:
+      - kafka
+      - redis
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  feature-service:
+    image: python:3.11-slim
+    container_name: turbofan-feature-service
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_INPUT_TOPIC: turbofan.features
+      KAFKA_OUTPUT_TOPIC: turbofan.model.input
+    command: >
+      sh -c "echo 'feature service placeholder running';
+      while true; do sleep 3600; done"
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  model-serving:
+    image: python:3.11-slim
+    container_name: turbofan-model-serving
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - ./models:/models
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_INPUT_TOPIC: turbofan.model.input
+      KAFKA_OUTPUT_TOPIC: turbofan.anomalies
+      MODEL_PATH: /models
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      API_PORT: 8000
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "echo 'model serving placeholder running';
+      while true; do sleep 3600; done"
+    depends_on:
+      - kafka
+      - redis
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  alert-service:
+    image: python:3.11-slim
+    container_name: turbofan-alert-service
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_INPUT_TOPIC: turbofan.anomalies
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ALERT_CHANNELS: email,slack,sms
+    command: >
+      sh -c "echo 'alert service placeholder running';
+      while true; do sleep 3600; done"
+    depends_on:
+      - kafka
+      - redis
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  backend-api:
+    image: python:3.11-slim
+    container_name: turbofan-backend-api
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      API_PORT: 5000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "5000:5000"
+    command: >
+      sh -c "echo 'backend api placeholder running';
+      while true; do sleep 3600; done"
+    depends_on:
+      - kafka
+      - redis
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  dashboard:
+    image: node:20-alpine
+    container_name: turbofan-dashboard
+    working_dir: /app
+    volumes:
+      - ./dasboard:/app
+    environment:
+      REACT_APP_API_URL: http://localhost:5000
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    command: >
+      sh -c "echo 'dashboard placeholder running';
+      while true; do sleep 3600; done"
+    depends_on:
+      - backend-api
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  minio:
+    image: minio/minio:RELEASE.2025-02-18T16-25-55Z
+    container_name: turbofan-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9002:9001"
+    volumes:
+      - minio-data:/data
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  etl-batch-job:
+    image: python:3.11-slim
+    container_name: turbofan-etl-batch-job
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+    environment:
+      RAW_DATA_PATH: /data
+      FEATURE_STORE_URI: s3://turbofan-feature-store
+      MINIO_ENDPOINT: http://minio:9000
+    command: >
+      sh -c "echo 'etl batch job placeholder running';
+      while true; do sleep 3600; done"
+    depends_on:
+      - minio
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  trainer:
+    image: python:3.11-slim
+    container_name: turbofan-trainer
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - ./models:/models
+      - ./data:/data
+    environment:
+      TRAIN_DATA_PATH: /data/processed/train
+      MODEL_OUTPUT_PATH: /models
+      MODEL_REGISTRY_URI: http://model-registry:5050
+    command: >
+      sh -c "echo 'offline trainer placeholder running';
+      while true; do sleep 3600; done"
+    depends_on:
+      - model-registry
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  model-registry:
+    image: python:3.11-slim
+    container_name: turbofan-model-registry
+    working_dir: /app
+    environment:
+      REGISTRY_PORT: 5050
+    ports:
+      - "5050:5050"
+    command: >
+      sh -c "echo 'model registry placeholder running';
+      while true; do sleep 3600; done"
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: turbofan-prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: turbofan-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+networks:
+  turbofan-net:
+    name: turbofan-net
+    driver: bridge
+
+volumes:
+  redis-data:
+  minio-data:
+  grafana-data:
