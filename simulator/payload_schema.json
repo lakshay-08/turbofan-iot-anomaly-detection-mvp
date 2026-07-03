@@ -2,57 +2,153 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.com/schemas/turbofan-telemetry.json",
-  "title": "Turbofan Telemetry Frame",
-  "description": "CMAPSS-like turbofan engine telemetry payload for MQTT publishing.",
+  "title": "Turbofan Telemetry Frame v2",
+  "description": "CMAPSS-inspired turbofan digital twin telemetry payload for MQTT publishing.",
   "type": "object",
-  "required": ["timestamp", "engine_id", "sequence", "operating_condition", "sensors", "quality", "meta"],
+  "required": [
+    "timestamp",
+    "engine_id",
+    "cycle",
+    "sequence",
+    "health_score",
+    "degradation_index",
+    "anomaly_score",
+    "predicted_failure_probability",
+    "flight_phase",
+    "operational_settings",
+    "operating_condition",
+    "features",
+    "prediction_features",
+    "quality",
+    "faults",
+    "meta"
+  ],
   "properties": {
     "timestamp": { "type": "string", "format": "date-time" },
     "engine_id": { "type": "string", "pattern": "^E_\\d{3}$" },
+    "cycle": { "type": "integer", "minimum": 0 },
     "sequence": { "type": "integer", "minimum": 0 },
+    "health_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "degradation_index": { "type": "number", "minimum": 0, "maximum": 1 },
+    "anomaly_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "predicted_failure_probability": { "type": "number", "minimum": 0, "maximum": 1 },
+    "flight_phase": {
+      "type": "string",
+      "enum": ["IDLE", "TAKEOFF", "CLIMB", "CRUISE", "DESCENT"]
+    },
+    "operational_settings": {
+      "type": "object",
+      "required": ["setting_1", "setting_2", "setting_3"],
+      "properties": {
+        "setting_1": { "type": "number" },
+        "setting_2": { "type": "number" },
+        "setting_3": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
     "operating_condition": {
       "type": "object",
-      "required": ["alt", "Mach", "Throttle"],
+      "required": ["alt", "Mach", "ambient_temp_c", "Throttle"],
       "properties": {
         "alt": { "type": "number" },
         "Mach": { "type": "number" },
+        "ambient_temp_c": { "type": "number" },
         "Throttle": { "type": "number", "minimum": 0, "maximum": 1 }
       },
       "additionalProperties": false
     },
-    "sensors": {
+    "features": {
       "type": "object",
-      "required": ["EGT", "T2", "P30", "Nf", "Nc", "Ps30", "Wf", "phi", "NRc"],
+      "required": [
+        "sensor_1", "sensor_2", "sensor_3", "sensor_4", "sensor_5", "sensor_6", "sensor_7",
+        "sensor_8", "sensor_9", "sensor_10", "sensor_11", "sensor_12", "sensor_13", "sensor_14",
+        "sensor_15", "sensor_16", "sensor_17", "sensor_18", "sensor_19", "sensor_20", "sensor_21"
+      ],
       "properties": {
-        "EGT": { "type": "number" },
-        "T2": { "type": "number" },
-        "P30": { "type": "number" },
-        "Nf": { "type": "number" },
-        "Nc": { "type": "number" },
-        "Ps30": { "type": "number" },
-        "Wf": { "type": "number", "minimum": 0, "maximum": 1 },
-        "phi": { "type": "number", "minimum": 0, "maximum": 1 },
-        "NRc": { "type": "number", "minimum": 0, "maximum": 1 }
+        "sensor_1": { "type": ["number", "null"] },
+        "sensor_2": { "type": ["number", "null"] },
+        "sensor_3": { "type": ["number", "null"] },
+        "sensor_4": { "type": ["number", "null"] },
+        "sensor_5": { "type": ["number", "null"] },
+        "sensor_6": { "type": ["number", "null"] },
+        "sensor_7": { "type": ["number", "null"] },
+        "sensor_8": { "type": ["number", "null"] },
+        "sensor_9": { "type": ["number", "null"] },
+        "sensor_10": { "type": ["number", "null"] },
+        "sensor_11": { "type": ["number", "null"] },
+        "sensor_12": { "type": ["number", "null"] },
+        "sensor_13": { "type": ["number", "null"] },
+        "sensor_14": { "type": ["number", "null"] },
+        "sensor_15": { "type": ["number", "null"] },
+        "sensor_16": { "type": ["number", "null"] },
+        "sensor_17": { "type": ["number", "null"] },
+        "sensor_18": { "type": ["number", "null"] },
+        "sensor_19": { "type": ["number", "null"] },
+        "sensor_20": { "type": ["number", "null"] },
+        "sensor_21": { "type": ["number", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "prediction_features": {
+      "type": "object",
+      "required": ["sensor_2", "sensor_3", "sensor_4", "sensor_8", "sensor_9", "sensor_11", "sensor_13", "sensor_17"],
+      "properties": {
+        "sensor_2": { "type": "number" },
+        "sensor_3": { "type": "number" },
+        "sensor_4": { "type": "number" },
+        "sensor_8": { "type": "number" },
+        "sensor_9": { "type": "number" },
+        "sensor_11": { "type": "number" },
+        "sensor_13": { "type": "number" },
+        "sensor_17": { "type": "number" }
       },
       "additionalProperties": false
     },
     "quality": {
       "type": "object",
-      "required": ["status", "missing"],
+      "required": ["status", "missing", "out_of_range", "comm_loss"],
       "properties": {
         "status": { "type": "string", "enum": ["OK", "WARN", "BAD"] },
-        "missing": { "type": "integer", "minimum": 0 }
+        "missing": { "type": "integer", "minimum": 0 },
+        "out_of_range": { "type": "integer", "minimum": 0 },
+        "comm_loss": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "faults": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "debug": {
+      "type": "object",
+      "required": ["true_rul", "max_life"],
+      "properties": {
+        "true_rul": { "type": "integer", "minimum": 0 },
+        "max_life": { "type": "integer", "minimum": 1 }
       },
       "additionalProperties": false
     },
     "meta": {
       "type": "object",
-      "required": ["source", "schema_version"],
+      "required": ["source", "schema_version", "failed", "anomalies"],
       "properties": {
         "source": { "type": "string" },
-        "schema_version": { "type": "string" }
+        "schema_version": { "type": "string" },
+        "failed": { "type": "boolean" },
+        "anomalies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "sensor"],
+            "properties": {
+              "type": { "type": "string" },
+              "sensor": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     }
   },
   "additionalProperties": false
