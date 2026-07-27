@@ -1,38 +1,122 @@
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
+.dashboard-shell {
   min-height: 100vh;
+  padding: 2rem;
+  background: linear-gradient(135deg, #071120 0%, #112542 100%);
+  color: #f5f7ff;
+}
+
+.hero {
+  margin-bottom: 1.5rem;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: #6ec5ff;
+  font-size: 0.82rem;
+  margin-bottom: 0.4rem;
+}
+
+.hero h1 {
+  margin: 0 0 0.4rem;
+  font-size: 2rem;
+}
+
+.hero-copy {
+  color: #c8d7f6;
+  max-width: 720px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.stat-card,
+.panel {
+  background: rgba(10, 24, 44, 0.82);
+  border: 1px solid rgba(110, 197, 255, 0.24);
+  border-radius: 16px;
+  padding: 1rem 1.2rem;
+  box-shadow: 0 20px 40px rgba(2, 8, 23, 0.25);
+}
+
+.stat-card span {
+  display: block;
+  color: #8fb8ff;
+  margin-bottom: 0.36rem;
+}
+
+.stat-card strong {
+  font-size: 1.6rem;
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.panel-header h2 {
+  margin: 0 0 0.8rem;
+  font-size: 1.05rem;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
+  gap: 0.6rem;
+}
+
+.list li {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  gap: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.App-link {
-  color: #61dafb;
+.pill {
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  text-transform: capitalize;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.pill.high {
+  background: rgba(248, 113, 113, 0.22);
+  color: #fecaca;
+}
+
+.pill.medium {
+  background: rgba(250, 204, 21, 0.22);
+  color: #fde68a;
+}
+
+.empty,
+.status {
+  color: #c8d7f6;
+}
+
+.status-error {
+  color: #fda4af;
+}
+
+.engine-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.engine-table th,
+.engine-table td {
+  text-align: left;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
