@@ -89,25 +89,54 @@ services:
     networks:
       - turbofan-net
 
-  ingest-mqtt-to-kafka:
+  ingest-service:
     image: python:3.11-slim
-    container_name: turbofan-ingest-mqtt-to-kafka
-    working_dir: /app
+    container_name: turbofan-ingest-service
+    working_dir: /workspace/backend
     volumes:
-      - ./backend:/app
+      - ./:/workspace
     environment:
+      INGESTION_MODE: mqtt
       MQTT_BROKER: mqtt-broker
       MQTT_PORT: 1883
       MQTT_TOPIC: turbofan/telemetry
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_TOPIC: turbofan.raw.telemetry
+      LOG_LEVEL: INFO
     command: >
-      sh -c "echo 'mqtt-to-kafka ingestion placeholder running';
-      while true; do sleep 3600; done"
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
+      python services/kafka_consumer.py"
     depends_on:
       - mqtt-broker
       - kafka
     restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  dataset-replay-service:
+    image: python:3.11-slim
+    container_name: turbofan-dataset-replay-service
+    working_dir: /workspace/backend
+    volumes:
+      - ./:/workspace
+    environment:
+      INGESTION_MODE: dataset
+      DATASET_PATH: /workspace/data/processed/test
+      REPLAY_SPEED: 10x
+      REPLAY_LIMIT: ""
+      REPLAY_START_INDEX: 0
+      MQTT_BROKER: mqtt-broker
+      MQTT_PORT: 1883
+      MQTT_TOPIC: turbofan/telemetry
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: turbofan.raw.telemetry
+      LOG_LEVEL: INFO
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
+      python services/kafka_consumer.py"
+    depends_on:
+      - kafka
+    restart: "no"
     networks:
       - turbofan-net
 
