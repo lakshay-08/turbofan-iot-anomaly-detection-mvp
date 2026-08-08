@@ -1,40 +1,37 @@
 {
-  "name": "dasboard",
-  "version": "0.1.0",
+  "name": "@figma/my-make-file",
   "private": true,
-  "dependencies": {
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^13.5.0",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
-  },
+  "version": "0.0.1",
+  "type": "module",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "vite",
+    "build": "vite build",
+    "dev": "vite"
   },
-  "proxy": "http://localhost:8000",
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+  "dependencies": {
+    "@radix-ui/react-select": "2.1.6",
+    "@radix-ui/react-slider": "1.2.3",
+    "@radix-ui/react-slot": "1.1.2",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "lucide-react": "0.487.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "recharts": "2.15.2",
+    "tailwind-merge": "3.2.0",
+    "vaul": "1.1.2"
   },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  "devDependencies": {
+    "@tailwindcss/vite": "4.1.12",
+    "@vitejs/plugin-react": "4.7.0",
+    "tailwindcss": "4.1.12",
+    "vite": "6.3.5"
+  },
+  "peerDependencies": {},
+  "peerDependenciesMeta": {},
+  "pnpm": {
+    "overrides": {
+      "vite": "6.3.5"
+    }
   }
 }

@@ -31,6 +31,14 @@ class PredictionService:
         self.feature_columns = list(self.metrics.get("feature_columns", []))
         self.threshold = float(self.metrics.get("threshold", 0.0))
 
+    def model_info(self) -> dict[str, Any]:
+        return {
+            "model_name": "IsolationForest",
+            "feature_columns": self.feature_columns,
+            "threshold": self.threshold,
+            "metrics": self.metrics,
+        }
+
     def _build_matrix(self, features: dict[str, Any]) -> np.ndarray:
         ordered = [[float(features[column]) for column in self.feature_columns]]
         return np.asarray(ordered, dtype=np.float64)

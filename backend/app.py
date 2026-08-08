@@ -2,17 +2,12 @@
 
 from __future__ import annotations
 
-import json
-import os
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
-import joblib
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -27,9 +22,6 @@ from backend.repositories.prediction_repository import PredictionRepository
 from backend.services.prediction_service import PredictionService
 
 LOGGER = configure_logging("backend")
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-ARTIFACT_DIR = PROJECT_ROOT / "artifacts" / "isolation_forest"
 
 EXAMPLE_FEATURES = {
     "sensor_11": 47.3,
@@ -71,58 +63,10 @@ class BatchPredictionResponse(BaseModel):
     predictions: list[PredictionResponse]
 
 
-@dataclass(slots=True)
-class ModelBundle:
-    model: Any
-    scaler: Any
-    feature_columns: list[str]
-    threshold: float
-    metrics: dict[str, Any]
-
-
-def load_feature_columns() -> list[str]:
-    feature_file = ARTIFACT_DIR / "feature_columns.joblib"
-    if feature_file.exists():
-        return list(joblib.load(feature_file))
-    metrics_file = ARTIFACT_DIR / "metrics.json"
-    if metrics_file.exists():
-        metrics = json.loads(metrics_file.read_text(encoding="utf-8"))
-        return list(metrics.get("feature_columns", []))
-    raise FileNotFoundError("Feature columns artifact is missing")
-
-
-def load_model_bundle() -> ModelBundle:
-    model_path = ARTIFACT_DIR / "model.joblib"
-    scaler_path = ARTIFACT_DIR / "scaler.joblib"
-    metrics_path = ARTIFACT_DIR / "metrics.json"
-
-    if not model_path.exists():
-        raise FileNotFoundError(f"Missing trained model artifact: {model_path}")
-    if not scaler_path.exists():
-        raise FileNotFoundError(f"Missing scaler artifact: {scaler_path}")
-    if not metrics_path.exists():
-        raise FileNotFoundError(f"Missing metrics artifact: {metrics_path}")
-
-    model = joblib.load(model_path)
-    scaler = joblib.load(scaler_path)
-    metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
-    feature_columns = load_feature_columns()
-    threshold = float(metrics["threshold"])
-    return ModelBundle(model=model, scaler=scaler, feature_columns=feature_columns, threshold=threshold, metrics=metrics)
-
-
-def build_feature_matrix(features: dict[str, float], feature_columns: list[str]) -> list[list[float]]:
-    missing = [column for column in feature_columns if column not in features]
-    if missing:
-        raise HTTPException(status_code=422, detail=f"Missing required features: {missing}")
-    return [[float(features[column]) for column in feature_columns]]
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    app.state.bundle = load_model_bundle()
-    app.state.prediction_service = PredictionService(artifact_dir=ARTIFACT_DIR)
+    app.state.prediction_service = PredictionService()
     yield
 
 
@@ -148,8 +92,8 @@ def health() -> dict[str, str]:
 
 @app.get("/model-info")
 def model_info() -> dict[str, Any]:
-    bundle: ModelBundle = app.state.bundle
-    return {"model_name": "IsolationForest", "feature_columns": bundle.feature_columns, "threshold": bundle.threshold, "metrics": bundle.metrics}
+    service: PredictionService = app.state.prediction_service
+    return service.model_info()
 
 
 def _persist_prediction(payload: TelemetryFrame, prediction_result: Any) -> None:
