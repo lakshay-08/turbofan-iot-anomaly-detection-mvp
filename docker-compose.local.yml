@@ -1,4 +1,25 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: turbofan-postgres
+    environment:
+      POSTGRES_DB: turbofan
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d turbofan"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
   mqtt-broker:
     image: eclipse-mosquitto:2.0
     container_name: turbofan-mqtt-broker
@@ -25,7 +46,8 @@ services:
     image: confluentinc/cp-kafka:7.5.3
     container_name: turbofan-kafka
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_started
     ports:
       - "9092:9092"
       - "29092:29092"
@@ -46,7 +68,8 @@ services:
     image: provectuslabs/kafka-ui:v0.7.2
     container_name: turbofan-kafka-ui
     depends_on:
-      - kafka
+      kafka:
+        condition: service_started
     ports:
       - "8080:8080"
     environment:
@@ -68,6 +91,42 @@ services:
     networks:
       - turbofan-net
 
+  backend-api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: turbofan-backend-api
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/turbofan
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: dasboard/Dockerfile
+    container_name: turbofan-dashboard
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+      REACT_APP_API_URL: http://localhost:8000
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend-api:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
   simulator:
     image: python:3.11-slim
     container_name: turbofan-simulator
@@ -84,7 +143,8 @@ services:
       sh -c "echo 'simulator service placeholder running';
       while true; do sleep 3600; done"
     depends_on:
-      - mqtt-broker
+      mqtt-broker:
+        condition: service_started
     restart: unless-stopped
     networks:
       - turbofan-net
@@ -107,8 +167,10 @@ services:
       sh -c "pip install --no-cache-dir -r requirements.txt &&
       python services/kafka_consumer.py"
     depends_on:
-      - mqtt-broker
-      - kafka
+      mqtt-broker:
+        condition: service_started
+      kafka:
+        condition: service_started
     restart: unless-stopped
     networks:
       - turbofan-net
@@ -135,7 +197,8 @@ services:
       sh -c "pip install --no-cache-dir -r requirements.txt &&
       python services/kafka_consumer.py"
     depends_on:
-      - kafka
+      kafka:
+        condition: service_started
     restart: "no"
     networks:
       - turbofan-net
@@ -156,8 +219,10 @@ services:
       sh -c "echo 'stream processor placeholder running';
       while true; do sleep 3600; done"
     depends_on:
-      - kafka
-      - redis
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_started
     restart: unless-stopped
     networks:
       - turbofan-net
@@ -176,7 +241,8 @@ services:
       sh -c "echo 'feature service placeholder running';
       while true; do sleep 3600; done"
     depends_on:
-      - kafka
+      kafka:
+        condition: service_started
     restart: unless-stopped
     networks:
       - turbofan-net
@@ -202,8 +268,10 @@ services:
       sh -c "echo 'model serving placeholder running';
       while true; do sleep 3600; done"
     depends_on:
-      - kafka
-      - redis
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_started
     restart: unless-stopped
     networks:
       - turbofan-net
@@ -224,52 +292,10 @@ services:
       sh -c "echo 'alert service placeholder running';
       while true; do sleep 3600; done"
     depends_on:
-      - kafka
-      - redis
-    restart: unless-stopped
-    networks:
-      - turbofan-net
-
-  backend-api:
-    image: python:3.11-slim
-    container_name: turbofan-backend-api
-    working_dir: /app
-    volumes:
-      - ./backend:/app
-      - ./artifacts:/artifacts
-    environment:
-      API_PORT: 5000
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-    ports:
-      - "5000:5000"
-    command: >
-      sh -c "pip install --no-cache-dir -r requirements.txt &&
-      uvicorn app:app --host 0.0.0.0 --port 5000"
-    depends_on:
-      - kafka
-      - redis
-    restart: unless-stopped
-    networks:
-      - turbofan-net
-
-  dashboard:
-    image: node:20-alpine
-    container_name: turbofan-dashboard
-    working_dir: /app
-    volumes:
-      - ./dasboard:/app
-    environment:
-      REACT_APP_API_URL: http://localhost:5000
-      PORT: 3000
-    ports:
-      - "3000:3000"
-    command: >
-      sh -c "echo 'dashboard placeholder running';
-      while true; do sleep 3600; done"
-    depends_on:
-      - backend-api
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_started
     restart: unless-stopped
     networks:
       - turbofan-net
@@ -305,7 +331,8 @@ services:
       sh -c "echo 'etl batch job placeholder running';
       while true; do sleep 3600; done"
     depends_on:
-      - minio
+      minio:
+        condition: service_started
     restart: unless-stopped
     networks:
       - turbofan-net
@@ -326,7 +353,8 @@ services:
       sh -c "echo 'offline trainer placeholder running';
       while true; do sleep 3600; done"
     depends_on:
-      - model-registry
+      model-registry:
+        condition: service_started
     restart: unless-stopped
     networks:
       - turbofan-net
@@ -366,7 +394,8 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_started
     restart: unless-stopped
     networks:
       - turbofan-net
@@ -377,6 +406,7 @@ networks:
     driver: bridge
 
 volumes:
+  postgres-data:
   redis-data:
   minio-data:
   grafana-data:
