@@ -50,6 +50,7 @@ def normalize_mqtt_event(payload: dict[str, Any], source_topic: str) -> dict[str
         "source": "mqtt",
         "engine_id": str(engine_id),
         "timestamp": _parse_timestamp(payload.get("timestamp")),
+        "features": payload.get("prediction_features") or payload.get("features") or {},
         "altitude": _safe_float(payload.get("altitude")) or _safe_float(op_cond_dict.get("alt")),
         "airspeed": _safe_float(payload.get("airspeed")) or _safe_float(op_cond_dict.get("Mach")),
         "temperature": _safe_float(payload.get("temperature")) or _safe_float(op_cond_dict.get("ambient_temp_c")) or _sensor(payload, "sensor_11"),

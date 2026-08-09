@@ -21,7 +21,9 @@ services:
       - turbofan-net
 
   mqtt-broker:
-    image: eclipse-mosquitto:2.0
+    build:
+      context: ./mqtt-broker
+      dockerfile: Dockerfile
     container_name: turbofan-mqtt-broker
     ports:
       - "1883:1883"
@@ -128,20 +130,16 @@ services:
       - turbofan-net
 
   simulator:
-    image: python:3.11-slim
+    build:
+      context: ./simulator
+      dockerfile: Dockerfile
     container_name: turbofan-simulator
-    working_dir: /app
-    volumes:
-      - ./simulator:/app
     environment:
       MQTT_HOST: mqtt-broker
       MQTT_PORT: 1883
       MQTT_TOPIC: turbofan/telemetry
       SIM_ENGINES: 4
       SIM_INTERVAL: 0.5
-    command: >
-      sh -c "echo 'simulator service placeholder running';
-      while true; do sleep 3600; done"
     depends_on:
       mqtt-broker:
         condition: service_started
@@ -150,11 +148,11 @@ services:
       - turbofan-net
 
   ingest-service:
-    image: python:3.11-slim
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: turbofan-ingest-service
-    working_dir: /workspace/backend
-    volumes:
-      - ./:/workspace
+    working_dir: /app/backend
     environment:
       INGESTION_MODE: mqtt
       MQTT_BROKER: mqtt-broker
@@ -164,8 +162,7 @@ services:
       KAFKA_TOPIC: turbofan.raw.telemetry
       LOG_LEVEL: INFO
     command: >
-      sh -c "pip install --no-cache-dir -r requirements.txt &&
-      python services/kafka_consumer.py"
+      sh -c "python -m services.ingestion.service"
     depends_on:
       mqtt-broker:
         condition: service_started
@@ -248,30 +245,41 @@ services:
       - turbofan-net
 
   model-serving:
-    image: python:3.11-slim
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: turbofan-model-serving
-    working_dir: /app
-    volumes:
-      - ./backend:/app
-      - ./models:/models
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KAFKA_INPUT_TOPIC: turbofan.model.input
-      KAFKA_OUTPUT_TOPIC: turbofan.anomalies
-      MODEL_PATH: /models
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      API_PORT: 8000
-    ports:
-      - "8000:8000"
+      RAW_TELEMETRY_TOPIC: turbofan.raw.telemetry
+      PREDICTION_RESULTS_TOPIC: turbofan.prediction.results
+      MODEL_TYPE: isolation_forest
     command: >
-      sh -c "echo 'model serving placeholder running';
-      while true; do sleep 3600; done"
+      sh -c "python -m backend.services.inference_service"
     depends_on:
       kafka:
         condition: service_started
-      redis:
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
+  prediction-writer:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: turbofan-prediction-writer
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      PREDICTION_RESULTS_TOPIC: turbofan.prediction.results
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/turbofan
+      ALERT_THRESHOLD: 0.85
+    command: >
+      sh -c "python -m backend.services.prediction_writer_service"
+    depends_on:
+      kafka:
         condition: service_started
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - turbofan-net
@@ -375,7 +383,9 @@ services:
       - turbofan-net
 
   prometheus:
-    image: prom/prometheus:v2.55.1
+    build:
+      context: ./monitoring
+      dockerfile: Dockerfile
     container_name: turbofan-prometheus
     ports:
       - "9090:9090"

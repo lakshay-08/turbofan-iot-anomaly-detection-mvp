@@ -6,10 +6,13 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any
 
+from collections import Counter
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
+from fastapi.responses import PlainTextResponse
 
 try:
     from backend.config import settings
@@ -22,6 +25,7 @@ from backend.repositories.prediction_repository import PredictionRepository
 from backend.services.prediction_service import PredictionService
 
 LOGGER = configure_logging("backend")
+METRICS = Counter()
 
 EXAMPLE_FEATURES = {
     "sensor_11": 47.3,
@@ -87,6 +91,7 @@ app.add_middleware(
 
 @app.get("/health")
 def health() -> dict[str, str]:
+    METRICS["health_checks_total"] += 1
     return {"status": "ok"}
 
 
@@ -117,8 +122,39 @@ def _persist_prediction(payload: TelemetryFrame, prediction_result: Any) -> None
         session.close()
 
 
+def _render_metrics() -> str:
+    session = SessionLocal()
+    try:
+        overview = PredictionRepository(session).overview_metrics()
+    finally:
+        session.close()
+
+    lines = [
+        "# HELP turbofan_health_checks_total Total health checks served.",
+        "# TYPE turbofan_health_checks_total counter",
+        f"turbofan_health_checks_total {METRICS['health_checks_total']}",
+        "# HELP turbofan_prediction_requests_total Total prediction requests served.",
+        "# TYPE turbofan_prediction_requests_total counter",
+        f"turbofan_prediction_requests_total {METRICS['prediction_requests_total']}",
+        "# HELP turbofan_recent_events_total Total events currently stored in the dashboard database.",
+        "# TYPE turbofan_recent_events_total gauge",
+        f"turbofan_recent_events_total {overview['total_events']}",
+        "# HELP turbofan_recent_anomalies_total Total anomalies currently stored in the dashboard database.",
+        "# TYPE turbofan_recent_anomalies_total gauge",
+        f"turbofan_recent_anomalies_total {overview['anomalies_detected']}",
+        "# HELP turbofan_active_engines Total active engines currently stored in the dashboard database.",
+        "# TYPE turbofan_active_engines gauge",
+        f"turbofan_active_engines {overview['active_engines']}",
+        "# HELP turbofan_models_running Number of models reported by the dashboard backend.",
+        "# TYPE turbofan_models_running gauge",
+        f"turbofan_models_running {overview['models_running']}",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 @app.post("/predict", response_model=PredictionResponse)
 def predict(payload: TelemetryFrame) -> PredictionResponse:
+    METRICS["prediction_requests_total"] += 1
     service: PredictionService = app.state.prediction_service
     prediction_result = service.predict(payload.model_dump())
     _persist_prediction(payload, prediction_result)
@@ -134,6 +170,7 @@ def predict(payload: TelemetryFrame) -> PredictionResponse:
 @app.post("/predict-batch", response_model=BatchPredictionResponse)
 @app.post("/batch-predict", response_model=BatchPredictionResponse)
 def predict_batch(payloads: list[TelemetryFrame]) -> BatchPredictionResponse:
+    METRICS["prediction_requests_total"] += len(payloads)
     service: PredictionService = app.state.prediction_service
     predictions: list[PredictionResponse] = []
     for payload in payloads:
@@ -172,6 +209,11 @@ def recent_anomalies(limit: int = 50) -> list[dict[str, Any]]:
         ]
     finally:
         session.close()
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+def metrics() -> str:
+    return _render_metrics()
 
 
 @app.get("/api/engines")

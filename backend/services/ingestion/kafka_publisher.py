@@ -6,7 +6,7 @@ import time
 from typing import Any
 
 from kafka import KafkaProducer
-from kafka.errors import KafkaError, NoBrokersAvailable
+from kafka.errors import KafkaError
 
 from services.ingestion.config import IngestionSettings
 
@@ -29,7 +29,7 @@ class KafkaEventPublisher:
                     linger_ms=5,
                     retries=5,
                 )
-            except NoBrokersAvailable as exc:
+            except Exception as exc:  # pragma: no cover - network/runtime dependent
                 last_error = exc
                 LOGGER.warning(
                     "Kafka broker not available, retrying",
