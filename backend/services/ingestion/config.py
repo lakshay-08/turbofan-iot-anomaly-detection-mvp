@@ -38,6 +38,8 @@ class IngestionSettings:
     replay_end_index: int | None
 
     log_level: str
+    dlq_topic: str
+    processing_retry_attempts: int
 
     kafka_max_retries: int
     kafka_retry_backoff_seconds: float
@@ -86,6 +88,8 @@ def load_settings() -> IngestionSettings:
         replay_start_index=_parse_int("REPLAY_START_INDEX", 0),
         replay_end_index=_parse_optional_int("REPLAY_END_INDEX"),
         log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper(),
+        dlq_topic=os.getenv("DLQ_TOPIC", "turbofan.dead-letter").strip(),
+        processing_retry_attempts=_parse_int("PROCESSING_RETRY_ATTEMPTS", 3),
         kafka_max_retries=_parse_int("KAFKA_MAX_RETRIES", 10),
         kafka_retry_backoff_seconds=_parse_float("KAFKA_RETRY_BACKOFF_SECONDS", 2.0),
         mqtt_max_retries=_parse_int("MQTT_MAX_RETRIES", 10),

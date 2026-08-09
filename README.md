@@ -8,10 +8,13 @@ The platform keeps the original inference flow intact:
 
 - Client → FastAPI → Loaded model → Prediction response
 
-The missing platform features are layered on top without changing the primary inference contract:
+The platform layers on production controls without changing the primary inference contract:
 
-- PostgreSQL persistence for predictions and alerts
-- Dashboard API endpoints for recent anomalies, engine activity, alerts, and overview metrics
+- JWT-authenticated dashboard and prediction APIs
+- PostgreSQL persistence for predictions, alerts, and users
+- Alembic-managed schema migrations
+- Event IDs for idempotency and traceability
+- Retry and dead-letter handling for Kafka and database writes
 - React monitoring UI for operations teams
 - Optional Kafka-based inference and dataset replay helpers
 - Structured rotating logs under the logs directory
@@ -19,10 +22,11 @@ The missing platform features are layered on top without changing the primary in
 ## Core workflow
 
 1. The FastAPI service receives telemetry and returns an anomaly score.
-2. Each prediction is stored in PostgreSQL through the shared persistence layer.
-3. High-severity results can be written to the alerts table.
-4. The dashboard consumes the PostgreSQL-backed API endpoints.
-5. Optional Kafka consumers can process telemetry from Kafka and publish results to the same persistence path.
+2. Each request and replayed event carries an immutable event ID.
+3. Predictions and alerts are stored in PostgreSQL with unique event-id constraints.
+4. High-severity results can be written to the alerts table.
+5. The dashboard signs in with JWT and consumes protected API endpoints.
+6. Optional Kafka consumers process telemetry, retry transient failures, and send poisoned messages to the dead-letter topic.
 
 ## Backend services
 
@@ -36,20 +40,31 @@ The missing platform features are layered on top without changing the primary in
 
 ## Database schema
 
-The platform uses two tables:
+The platform now uses three tables:
+
+- users
+  - id UUID
+  - email unique
+  - password_hash
+  - role
+  - is_active
+  - created_at
 
 - predictions
   - id UUID
+  - event_id unique
   - engine_id
-  - timestamp
+  - event_timestamp
   - anomaly_score
   - is_anomaly
   - model_name
+  - model_version
   - metadata JSONB
   - created_at
 
 - alerts
   - id UUID
+  - event_id unique
   - prediction_id
   - engine_id
   - severity
@@ -58,20 +73,29 @@ The platform uses two tables:
 
 ## Dashboard API
 
-The FastAPI service exposes the following endpoints:
+The FastAPI service now protects dashboard and prediction routes with JWT authentication:
 
+- POST /auth/login
+- GET /auth/me
+- POST /auth/users
 - GET /api/recent-anomalies
 - GET /api/engines
 - GET /api/engine/{engine_id}
 - GET /api/alerts
 - GET /api/metrics/overview
-
-Existing inference endpoints remain available:
-
-- GET /health
+- GET /model-info
 - POST /predict
 - POST /batch-predict
-- GET /model-info
+
+Use the dashboard login form with the bootstrap admin credentials configured in Docker Compose:
+
+- Email: admin@turbofan.local
+- Password: admin123!
+
+Existing health and metrics endpoints remain available:
+
+- GET /health
+- GET /metrics
 
 ## Kafka integration
 
@@ -80,10 +104,14 @@ Kafka is optional and does not replace the existing API inference path.
 - Raw telemetry can be replayed into the Kafka topic configured by RAW_TELEMETRY_TOPIC.
 - The inference consumer uses the shared prediction service and publishes prediction results to the prediction results topic.
 - The prediction writer service persists those results into PostgreSQL.
+- Transient Kafka and database failures are retried with exponential backoff and jitter.
+- Exhausted messages are routed to the dead-letter topic.
 
 ## Dataset replay
 
 Use the replay utility to publish existing processed CSV datasets into the API or Kafka.
+
+The API mode accepts a bearer token through `API_BEARER_TOKEN` or `AUTH_TOKEN` if you want to post directly to the protected `/predict` endpoint.
 
 Example:
 
@@ -110,10 +138,11 @@ Note: direct bind-mounting of the repository `logs/` directory from Docker may r
 
 ## Startup
 
-1. Start PostgreSQL and Kafka (or use the provided Docker Compose configuration).
-2. Install backend dependencies: pip install -r backend/requirements.txt
-3. Start the API: uvicorn backend.app:app --host 0.0.0.0 --port 8000
-4. Start the React dashboard: cd dasboard && npm install && npm start
+1. Start the full stack with Docker Compose: docker compose -f docker-compose.local.yml up --build
+2. The migration job runs Alembic upgrade head before the API and writer services start.
+3. If you run the backend manually, install dependencies with `pip install -r backend/requirements.txt` and run `alembic upgrade head` first.
+4. Start the API manually with `uvicorn backend.app:app --host 0.0.0.0 --port 8000`.
+5. Start the React dashboard with `cd dasboard && npm install && npm start`.
 
 ## Notes
 

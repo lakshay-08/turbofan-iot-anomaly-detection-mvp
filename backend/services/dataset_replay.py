@@ -7,6 +7,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 from urllib import request, error
 
 import joblib
@@ -38,7 +39,7 @@ def iter_rows(source_dir: Path) -> list[dict[str, Any]]:
 
 
 def build_payload(row: dict[str, Any], feature_columns: list[str]) -> dict[str, Any]:
-    payload: dict[str, Any] = {"engine_id": row.get("engine_id")}
+    payload: dict[str, Any] = {"event_id": str(uuid4()), "engine_id": row.get("engine_id")}
     features: dict[str, float] = {}
     for column in feature_columns:
         if column in row:
@@ -50,10 +51,14 @@ def build_payload(row: dict[str, Any], feature_columns: list[str]) -> dict[str, 
 
 def replay_via_api(rows: list[dict[str, Any]], feature_columns: list[str], api_url: str) -> None:
     endpoint = f"{api_url.rstrip('/')}/predict"
+    bearer_token = os.getenv("API_BEARER_TOKEN") or os.getenv("AUTH_TOKEN")
     for index, row in enumerate(rows, start=1):
         payload = build_payload(row, feature_columns)
         body = json.dumps(payload).encode("utf-8")
-        req = request.Request(endpoint, data=body, headers={"Content-Type": "application/json"}, method="POST")
+        headers = {"Content-Type": "application/json"}
+        if bearer_token:
+            headers["Authorization"] = f"Bearer {bearer_token}"
+        req = request.Request(endpoint, data=body, headers=headers, method="POST")
         try:
             with request.urlopen(req, timeout=10) as response:
                 response.read()

@@ -20,6 +20,22 @@ services:
     networks:
       - turbofan-net
 
+  db-migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: turbofan-db-migrate
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/turbofan
+    command: >
+      sh -c "alembic upgrade head"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - turbofan-net
+
   mqtt-broker:
     build:
       context: ./mqtt-broker
@@ -102,11 +118,19 @@ services:
       API_HOST: 0.0.0.0
       API_PORT: 8000
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/turbofan
+      JWT_SECRET_KEY: dev-secret-change-me
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      BOOTSTRAP_ADMIN_EMAIL: admin@turbofan.local
+      BOOTSTRAP_ADMIN_PASSWORD: admin123!
+      BOOTSTRAP_ADMIN_ROLE: admin
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
       - turbofan-net
@@ -156,6 +180,8 @@ services:
       MQTT_TOPIC: turbofan/telemetry
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_TOPIC: turbofan.raw.telemetry
+      DLQ_TOPIC: turbofan.dead-letter
+      PROCESSING_RETRY_ATTEMPTS: 3
       LOG_LEVEL: INFO
       SERVICE_NAME: ingest-service
     command: >
@@ -250,6 +276,9 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       RAW_TELEMETRY_TOPIC: turbofan.raw.telemetry
       PREDICTION_RESULTS_TOPIC: turbofan.prediction.results
+      DLQ_TOPIC: turbofan.dead-letter
+      PROCESSING_RETRY_ATTEMPTS: 3
+      KAFKA_PUBLISH_RETRIES: 3
       MODEL_TYPE: isolation_forest
     command: >
       sh -c "python -m backend.services.inference_service"
@@ -270,6 +299,8 @@ services:
       PREDICTION_RESULTS_TOPIC: turbofan.prediction.results
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/turbofan
       ALERT_THRESHOLD: 0.85
+      DLQ_TOPIC: turbofan.dead-letter
+      PROCESSING_RETRY_ATTEMPTS: 3
     command: >
       sh -c "python -m backend.services.prediction_writer_service"
     depends_on:
@@ -277,6 +308,8 @@ services:
         condition: service_started
       postgres:
         condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
       - turbofan-net

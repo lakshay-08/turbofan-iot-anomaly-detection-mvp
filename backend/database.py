@@ -23,6 +23,5 @@ def get_session() -> Iterator[Session]:
 
 
 def init_db() -> None:
-    from backend.models.db_models import Alert, Prediction
-
-    Base.metadata.create_all(bind=engine)
+    """Schema creation is managed by Alembic migrations."""
+    return None

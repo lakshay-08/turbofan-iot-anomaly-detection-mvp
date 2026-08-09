@@ -9,6 +9,10 @@ from services.ingestion.dataset_source import DatasetReplaySource
 from services.ingestion.kafka_publisher import KafkaEventPublisher
 from services.ingestion.logging_utils import configure_logging
 from services.ingestion.mqtt_source import MqttIngestionSource
+try:
+    from backend.services.dlq import DeadLetterPublisher
+except ModuleNotFoundError:  # pragma: no cover - backend/ working_dir execution path
+    from services.dlq import DeadLetterPublisher
 
 LOGGER = logging.getLogger(__name__)
 
@@ -20,6 +24,7 @@ class IngestionService:
         self.stop_event = Event()
 
         self.publisher = KafkaEventPublisher(self.settings)
+        self.dlq = DeadLetterPublisher(self.settings.kafka_bootstrap_servers, self.settings.dlq_topic)
         if self.settings.ingestion_mode == "mqtt":
             self.source = MqttIngestionSource(self.settings)
         else:
@@ -49,9 +54,18 @@ class IngestionService:
                 if self.stop_event.is_set():
                     break
 
-                sent = self.publisher.publish(self.settings.kafka_topic, event)
-                if not sent:
+                try:
+                    self.publisher.publish(self.settings.kafka_topic, event)
+                except Exception as exc:  # pragma: no cover - network/runtime dependent
                     LOGGER.error("Dropping event after Kafka retries", extra={"event_id": event.get("event_id")})
+                    self.dlq.publish_exception(
+                        service_name="ingest-service",
+                        stage="kafka_publish",
+                        event_id=str(event.get("event_id")),
+                        original_payload=event,
+                        exc=exc,
+                        source_topic=self.settings.kafka_topic,
+                    )
                     continue
 
                 published += 1
@@ -62,6 +76,7 @@ class IngestionService:
             if callable(close_fn):
                 close_fn()
             self.publisher.close()
+            self.dlq.close()
             LOGGER.info("Ingestion service stopped", extra={"records": published})
 
 

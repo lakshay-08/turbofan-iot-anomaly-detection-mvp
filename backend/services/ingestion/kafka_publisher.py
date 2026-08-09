@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 from typing import Any
 
 from kafka import KafkaProducer
-from kafka.errors import KafkaError
 
 from services.ingestion.config import IngestionSettings
+try:
+    from backend.utils.retry import RetryPolicy, run_with_retry
+except ModuleNotFoundError:  # pragma: no cover - backend/ working_dir execution path
+    from utils.retry import RetryPolicy, run_with_retry
 
 LOGGER = logging.getLogger(__name__)
 
@@ -19,37 +21,33 @@ class KafkaEventPublisher:
         self._producer = self._build_with_retry()
 
     def _build_with_retry(self) -> KafkaProducer:
-        last_error: Exception | None = None
-        for attempt in range(1, self._settings.kafka_max_retries + 1):
-            try:
-                return KafkaProducer(
-                    bootstrap_servers=self._settings.kafka_bootstrap_servers,
-                    value_serializer=lambda value: json.dumps(value).encode("utf-8"),
-                    acks="all",
-                    linger_ms=5,
-                    retries=5,
-                )
-            except Exception as exc:  # pragma: no cover - network/runtime dependent
-                last_error = exc
-                LOGGER.warning(
-                    "Kafka broker not available, retrying",
-                    extra={"error": str(exc)},
-                )
-                time.sleep(self._settings.kafka_retry_backoff_seconds)
-        raise RuntimeError(f"Unable to connect to Kafka after retries: {last_error}")
+        return run_with_retry(
+            "connect kafka producer",
+            lambda: KafkaProducer(
+                bootstrap_servers=self._settings.kafka_bootstrap_servers,
+                value_serializer=lambda value: json.dumps(value).encode("utf-8"),
+                acks="all",
+                linger_ms=5,
+                retries=5,
+            ),
+            RetryPolicy(
+                max_attempts=self._settings.kafka_max_retries,
+                initial_delay_seconds=self._settings.kafka_retry_backoff_seconds,
+                max_delay_seconds=30.0,
+            ),
+        )
 
     def publish(self, topic: str, event: dict[str, Any]) -> bool:
-        for _ in range(self._settings.kafka_max_retries):
-            try:
-                self._producer.send(topic, value=event).get(timeout=10)
-                return True
-            except KafkaError as exc:
-                LOGGER.warning(
-                    "Kafka publish failed, retrying",
-                    extra={"event_id": event.get("event_id"), "error": str(exc)},
-                )
-                time.sleep(self._settings.kafka_retry_backoff_seconds)
-        return False
+        run_with_retry(
+            "publish kafka message",
+            lambda: self._producer.send(topic, value=event).get(timeout=10),
+            RetryPolicy(
+                max_attempts=self._settings.kafka_max_retries,
+                initial_delay_seconds=self._settings.kafka_retry_backoff_seconds,
+                max_delay_seconds=30.0,
+            ),
+        )
+        return True
 
     def close(self) -> None:
         self._producer.flush(timeout=10)

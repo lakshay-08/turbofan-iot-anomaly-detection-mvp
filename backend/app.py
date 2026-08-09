@@ -5,23 +5,30 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any
+from uuid import UUID, uuid4
 
 from collections import Counter
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict, Field
 from fastapi.responses import PlainTextResponse
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.orm import Session
 
 try:
     from backend.config import settings
 except ModuleNotFoundError:  # pragma: no cover - direct script execution path
     from config import settings
 
-from backend.database import SessionLocal, init_db
+from backend.database import SessionLocal
+from backend.dependencies import get_current_user, require_roles
 from backend.logging_config import configure_logging
 from backend.repositories.prediction_repository import PredictionRepository
+from backend.repositories.user_repository import UserRepository
+from backend.schemas.auth import AccessTokenResponse, LoginRequest, UserCreateRequest, UserRead
+from backend.security.auth import create_access_token, hash_password, verify_password
+from backend.services.bootstrap import bootstrap_admin_user
 from backend.services.prediction_service import PredictionService
 
 LOGGER = configure_logging("backend")
@@ -41,9 +48,11 @@ EXAMPLE_FEATURES = {
 
 class TelemetryFrame(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         json_schema_extra={
             "examples": [
                 {
+                    "event_id": "b9da6ad2-9d83-4f4d-9a0d-3f49ec2a9d6b",
                     "engine_id": 1,
                     "features": EXAMPLE_FEATURES,
                 },
@@ -51,11 +60,16 @@ class TelemetryFrame(BaseModel):
         }
     )
 
+    event_id: UUID = Field(default_factory=uuid4, description="Immutable event identifier")
     engine_id: int | str | None = Field(default=None, description="Optional engine identifier")
+    timestamp: datetime | None = Field(default=None, description="Optional event timestamp")
+    source: str | None = Field(default=None, description="Event source")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Free-form event metadata")
     features: dict[str, float] = Field(description="Feature name to value mapping", examples=[EXAMPLE_FEATURES])
 
 
 class PredictionResponse(BaseModel):
+    event_id: UUID
     anomaly_score: float
     threshold: float
     is_anomaly: bool
@@ -69,7 +83,16 @@ class BatchPredictionResponse(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
+    session = SessionLocal()
+    try:
+        bootstrap_admin_user(
+            session,
+            email=settings.bootstrap_admin_email,
+            password=settings.bootstrap_admin_password,
+            role=settings.bootstrap_admin_role,
+        )
+    finally:
+        session.close()
     app.state.prediction_service = PredictionService()
     yield
 
@@ -95,26 +118,94 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/model-info")
+@app.post("/auth/login", response_model=AccessTokenResponse)
+def login(payload: LoginRequest) -> AccessTokenResponse:
+    session = SessionLocal()
+    try:
+        repository = UserRepository(session)
+        user = repository.get_by_email(payload.email)
+        if user is None or not verify_password(payload.password, user.password_hash):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+        token = create_access_token(
+            subject=str(user.id),
+            email=user.email,
+            role=user.role,
+            secret_key=settings.jwt_secret_key,
+            algorithm=settings.jwt_algorithm,
+            expires_minutes=settings.access_token_expire_minutes,
+        )
+        return AccessTokenResponse(
+            access_token=token,
+            expires_in=settings.access_token_expire_minutes * 60,
+            user=UserRead(
+                id=user.id,
+                email=user.email,
+                role=user.role,
+                is_active=user.is_active,
+                created_at=user.created_at,
+            ),
+        )
+    finally:
+        session.close()
+
+
+@app.get("/auth/me", response_model=UserRead)
+def me(current_user: UserRead = Depends(get_current_user)) -> UserRead:
+    return current_user
+
+
+@app.post("/auth/users", response_model=UserRead, dependencies=[Depends(require_roles("admin"))])
+def create_user(payload: UserCreateRequest) -> UserRead:
+    session = SessionLocal()
+    try:
+        repository = UserRepository(session)
+        existing = repository.get_by_email(payload.email)
+        if existing is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already exists")
+
+        user = repository.create_user(
+            email=payload.email,
+            password_hash=hash_password(payload.password),
+            role=payload.role,
+            is_active=True,
+        )
+        return UserRead(
+            id=user.id,
+            email=user.email,
+            role=user.role,
+            is_active=user.is_active,
+            created_at=user.created_at,
+        )
+    finally:
+        session.close()
+
+
+@app.get("/model-info", dependencies=[Depends(require_roles("viewer", "operator", "admin"))])
 def model_info() -> dict[str, Any]:
     service: PredictionService = app.state.prediction_service
     return service.model_info()
 
 
-def _persist_prediction(payload: TelemetryFrame, prediction_result: Any) -> None:
+def _persist_prediction(payload: TelemetryFrame, prediction_result: Any, current_user: UserRead | None = None) -> None:
     session = SessionLocal()
     try:
         repository = PredictionRepository(session)
         repository.add_prediction(
             {
+                "event_id": str(payload.event_id),
                 "engine_id": payload.engine_id,
-                "timestamp": datetime.now(timezone.utc),
+                "timestamp": payload.timestamp or datetime.now(timezone.utc),
                 "anomaly_score": prediction_result.anomaly_score,
                 "is_anomaly": prediction_result.is_anomaly,
                 "model_name": prediction_result.model_name,
                 "metadata": {
                     **(prediction_result.metadata or {}),
+                    **payload.metadata,
+                    "request_event_id": str(payload.event_id),
                     "request_engine_id": payload.engine_id,
+                    "requested_by_user_id": str(current_user.id) if current_user else None,
+                    "requested_by_role": current_user.role if current_user else None,
                 },
             }
         )
@@ -153,12 +244,13 @@ def _render_metrics() -> str:
 
 
 @app.post("/predict", response_model=PredictionResponse)
-def predict(payload: TelemetryFrame) -> PredictionResponse:
+def predict(payload: TelemetryFrame, current_user: UserRead = Depends(require_roles("operator", "admin"))) -> PredictionResponse:
     METRICS["prediction_requests_total"] += 1
     service: PredictionService = app.state.prediction_service
     prediction_result = service.predict(payload.model_dump())
-    _persist_prediction(payload, prediction_result)
+    _persist_prediction(payload, prediction_result, current_user)
     return PredictionResponse(
+        event_id=payload.event_id,
         anomaly_score=prediction_result.anomaly_score,
         threshold=prediction_result.threshold,
         is_anomaly=prediction_result.is_anomaly,
@@ -169,15 +261,16 @@ def predict(payload: TelemetryFrame) -> PredictionResponse:
 
 @app.post("/predict-batch", response_model=BatchPredictionResponse)
 @app.post("/batch-predict", response_model=BatchPredictionResponse)
-def predict_batch(payloads: list[TelemetryFrame]) -> BatchPredictionResponse:
+def predict_batch(payloads: list[TelemetryFrame], current_user: UserRead = Depends(require_roles("operator", "admin"))) -> BatchPredictionResponse:
     METRICS["prediction_requests_total"] += len(payloads)
     service: PredictionService = app.state.prediction_service
     predictions: list[PredictionResponse] = []
     for payload in payloads:
         prediction_result = service.predict(payload.model_dump())
-        _persist_prediction(payload, prediction_result)
+        _persist_prediction(payload, prediction_result, current_user)
         predictions.append(
             PredictionResponse(
+                event_id=payload.event_id,
                 anomaly_score=prediction_result.anomaly_score,
                 threshold=prediction_result.threshold,
                 is_anomaly=prediction_result.is_anomaly,
@@ -188,7 +281,7 @@ def predict_batch(payloads: list[TelemetryFrame]) -> BatchPredictionResponse:
     return BatchPredictionResponse(predictions=predictions)
 
 
-@app.get("/api/recent-anomalies")
+@app.get("/api/recent-anomalies", dependencies=[Depends(require_roles("viewer", "operator", "admin"))])
 def recent_anomalies(limit: int = 50) -> list[dict[str, Any]]:
     session = SessionLocal()
     try:
@@ -197,6 +290,7 @@ def recent_anomalies(limit: int = 50) -> list[dict[str, Any]]:
         return [
             {
                 "id": str(record.id),
+                "event_id": str(record.event_id),
                 "engine_id": record.engine_id,
                 "timestamp": record.event_timestamp.isoformat() if record.event_timestamp else None,
                 "anomaly_score": record.anomaly_score,
@@ -216,7 +310,7 @@ def metrics() -> str:
     return _render_metrics()
 
 
-@app.get("/api/engines")
+@app.get("/api/engines", dependencies=[Depends(require_roles("viewer", "operator", "admin"))])
 def engines() -> list[dict[str, Any]]:
     session = SessionLocal()
     try:
@@ -225,7 +319,7 @@ def engines() -> list[dict[str, Any]]:
         session.close()
 
 
-@app.get("/api/engine/{engine_id}")
+@app.get("/api/engine/{engine_id}", dependencies=[Depends(require_roles("viewer", "operator", "admin"))])
 def engine_details(engine_id: str) -> list[dict[str, Any]]:
     session = SessionLocal()
     try:
@@ -233,6 +327,7 @@ def engine_details(engine_id: str) -> list[dict[str, Any]]:
         return [
             {
                 "engine_id": record.engine_id,
+                "event_id": str(record.event_id),
                 "timestamp": record.event_timestamp.isoformat() if record.event_timestamp else None,
                 "anomaly_score": record.anomaly_score,
                 "is_anomaly": record.is_anomaly,
@@ -245,7 +340,7 @@ def engine_details(engine_id: str) -> list[dict[str, Any]]:
         session.close()
 
 
-@app.get("/api/metrics/overview")
+@app.get("/api/metrics/overview", dependencies=[Depends(require_roles("viewer", "operator", "admin"))])
 def metrics_overview() -> dict[str, Any]:
     session = SessionLocal()
     try:
@@ -254,12 +349,12 @@ def metrics_overview() -> dict[str, Any]:
         session.close()
 
 
-@app.get("/api/metrics/trends")
+@app.get("/api/metrics/trends", dependencies=[Depends(require_roles("viewer", "operator", "admin"))])
 def metrics_trends() -> dict[str, Any]:
     return {"trend": "stable"}
 
 
-@app.get("/api/alerts")
+@app.get("/api/alerts", dependencies=[Depends(require_roles("viewer", "operator", "admin"))])
 def alerts() -> list[dict[str, Any]]:
     session = SessionLocal()
     try:
@@ -267,6 +362,7 @@ def alerts() -> list[dict[str, Any]]:
         return [
             {
                 "id": str(alert.id),
+                "event_id": str(alert.event_id),
                 "engine_id": alert.engine_id,
                 "severity": alert.severity,
                 "message": alert.message,
