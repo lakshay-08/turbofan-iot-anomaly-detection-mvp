@@ -1,22 +1,0 @@
-turbofan-backend-api  | INFO:     Started server process [1]
-turbofan-backend-api  | INFO:     Waiting for application startup.
-turbofan-backend-api  | INFO:     Application startup complete.
-turbofan-backend-api  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-turbofan-backend-api  | INFO:     172.18.0.6:36136 - "GET /metrics HTTP/1.1" 200 OK
-turbofan-backend-api  | INFO:     172.18.0.6:36136 - "GET /metrics HTTP/1.1" 200 OK
-turbofan-backend-api  | INFO:     172.18.0.6:39412 - "GET /metrics HTTP/1.1" 200 OK
-turbofan-backend-api  | INFO:     172.18.0.6:39412 - "GET /metrics HTTP/1.1" 200 OK
-turbofan-backend-api  | INFO:     172.18.0.6:40440 - "GET /metrics HTTP/1.1" 200 OK
-turbofan-backend-api  | INFO:     172.18.0.6:40440 - "GET /metrics HTTP/1.1" 200 OK
-turbofan-backend-api  | INFO:     172.18.0.6:56846 - "GET /metrics HTTP/1.1" 200 OK
-turbofan-backend-api  | INFO:     172.18.0.6:56846 - "GET /metrics HTTP/1.1" 200 OK
-turbofan-backend-api  | INFO:     Shutting down
-turbofan-backend-api  | INFO:     Shutting down
-turbofan-backend-api  | INFO:     Waiting for application shutdown.
-turbofan-backend-api  | INFO:     Waiting for application shutdown.
-turbofan-backend-api  | INFO:     Application shutdown complete.
-turbofan-backend-api  | INFO:     Application shutdown complete.
-turbofan-backend-api  | INFO:     Finished server process [1]
-turbofan-backend-api  | INFO:     Finished server process [1]
-[Kturbofan-backend-api exited with code 0
-[Kturbofan-backend-api exited with code 0

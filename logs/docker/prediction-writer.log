@@ -1,3 +1,0 @@
-turbofan-prediction-writer  | /app/backend/services/prediction_writer_service.py:30: DeprecationWarning: value_deserializer does not implement kafka.serializer.Deserializer
-turbofan-prediction-writer  |   self.consumer = KafkaConsumer(
-[Kturbofan-prediction-writer exited with code 137
