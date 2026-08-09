@@ -1,0 +1,24 @@
+turbofan-mqtt-broker  | 1786234460: mosquitto version 2.0.22 starting
+turbofan-mqtt-broker  | 1786234460: Config loaded from /mosquitto/config/mosquitto.conf.
+turbofan-mqtt-broker  | 1786234460: Opening ipv4 listen socket on port 1883.
+turbofan-mqtt-broker  | 1786234460: Opening websockets listen socket on port 9001.
+turbofan-mqtt-broker  | 1786234460: mosquitto version 2.0.22 running
+turbofan-mqtt-broker  | 1786234461: New connection from 172.18.0.11:34557 on port 1883.
+turbofan-mqtt-broker  | 1786234461: New client connected from 172.18.0.11:34557 as turbofan-sim (p2, c1, k60).
+turbofan-mqtt-broker  | 1786234664: New connection from 172.18.0.10:39803 on port 1883.
+turbofan-mqtt-broker  | 1786234664: New client connected from 172.18.0.10:39803 as auto-AC13037F-C54E-DCAA-790D-F4F45FB0BA88 (p2, c1, k60).
+turbofan-mqtt-broker  | 1786234752: New connection from 192.168.65.1:29187 on port 1883.
+turbofan-mqtt-broker  | 1786234752: New client connected from 192.168.65.1:29187 as mqtt-explorer-3c7c6e20 (p2, c1, k60).
+turbofan-mqtt-broker  | 1786235922: Client turbofan-sim disconnected.
+turbofan-mqtt-broker  | 1786235922: New connection from 172.18.0.11:56621 on port 1883.
+turbofan-mqtt-broker  | 1786235922: New client connected from 172.18.0.11:56621 as turbofan-sim (p2, c1, k60).
+turbofan-mqtt-broker  | 1786236128: Client turbofan-sim disconnected.
+turbofan-mqtt-broker  | 1786236128: Client auto-AC13037F-C54E-DCAA-790D-F4F45FB0BA88 closed its connection.
+turbofan-mqtt-broker  | 1786236175: New connection from 172.18.0.10:49303 on port 1883.
+turbofan-mqtt-broker  | 1786236175: New client connected from 172.18.0.10:49303 as turbofan-sim (p2, c1, k60).
+turbofan-mqtt-broker  | 1786236176: New connection from 172.18.0.9:40221 on port 1883.
+turbofan-mqtt-broker  | 1786236176: New client connected from 172.18.0.9:40221 as auto-CC8B62A2-9BDC-8F24-97E6-B487A80781BE (p2, c1, k60).
+turbofan-mqtt-broker  | 1786236240: Client turbofan-sim disconnected.
+turbofan-mqtt-broker  | 1786236240: Client auto-CC8B62A2-9BDC-8F24-97E6-B487A80781BE closed its connection.
+turbofan-mqtt-broker  | 1786236241: mosquitto version 2.0.22 terminating
+[Kturbofan-mqtt-broker exited with code 0

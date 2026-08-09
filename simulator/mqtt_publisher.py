@@ -13,6 +13,8 @@ import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 from engine_model import EngineDigitalTwin, EngineRuntimeConfig
 from faults import FaultInjectionConfig
@@ -26,11 +28,33 @@ except ImportError:
     sys.exit(1)
 
 
-logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO"),
-    format="%(asctime)s %(levelname)s %(name)s %(message)s",
-)
-log = logging.getLogger("turbofan_simulator")
+def configure_logging() -> logging.Logger:
+    level_name = os.getenv("LOG_LEVEL", "INFO")
+    logger = logging.getLogger("turbofan_simulator")
+    logger.setLevel(getattr(logging, level_name.upper(), logging.INFO))
+    logger.propagate = False
+
+    if logger.handlers:
+        return logger
+
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+
+    log_root = os.getenv("LOG_ROOT")
+    if log_root:
+        log_dir = Path(log_root) / "simulator"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        file_handler = RotatingFileHandler(log_dir / "simulator.log", maxBytes=5_000_000, backupCount=5)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+    return logger
+
+
+log = configure_logging()
 
 
 def log_event(level: str, event: str, **fields: object) -> None:

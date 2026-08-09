@@ -1,0 +1,40 @@
+turbofan-prometheus  | ts=2026-08-09T00:29:48.295Z caller=main.go:627 level=info msg="No time or size retention was set so using the default time retention" duration=15d
+turbofan-prometheus  | ts=2026-08-09T00:29:48.295Z caller=main.go:671 level=info msg="Starting Prometheus Server" mode=server version="(version=2.55.1, branch=HEAD, revision=6d7569113f1ca814f1e149f74176656540043b8d)"
+turbofan-prometheus  | ts=2026-08-09T00:29:48.295Z caller=main.go:676 level=info build_context="(go=go1.23.2, platform=linux/arm64, user=root@194e0f5dd5e8, date=20241106-10:11:03, tags=netgo,builtinassets,stringlabels)"
+turbofan-prometheus  | ts=2026-08-09T00:29:48.295Z caller=main.go:677 level=info host_details="(Linux 6.12.76-linuxkit #1 SMP Mon Mar 30 09:10:35 UTC 2026 aarch64 fb0dfa633abf (none))"
+turbofan-prometheus  | ts=2026-08-09T00:29:48.295Z caller=main.go:678 level=info fd_limits="(soft=1048576, hard=1048576)"
+turbofan-prometheus  | ts=2026-08-09T00:29:48.295Z caller=main.go:679 level=info vm_limits="(soft=unlimited, hard=unlimited)"
+turbofan-prometheus  | ts=2026-08-09T00:29:48.298Z caller=web.go:585 level=info component=web msg="Start listening for connections" address=0.0.0.0:9090
+turbofan-prometheus  | ts=2026-08-09T00:29:48.298Z caller=main.go:1197 level=info msg="Starting TSDB ..."
+turbofan-prometheus  | ts=2026-08-09T00:29:48.298Z caller=tls_config.go:348 level=info component=web msg="Listening on" address=[::]:9090
+turbofan-prometheus  | ts=2026-08-09T00:29:48.298Z caller=tls_config.go:351 level=info component=web msg="TLS is disabled." http2=false address=[::]:9090
+turbofan-prometheus  | ts=2026-08-09T00:29:48.300Z caller=head.go:627 level=info component=tsdb msg="Replaying on-disk memory mappable chunks if any"
+turbofan-prometheus  | ts=2026-08-09T00:29:48.300Z caller=head.go:714 level=info component=tsdb msg="On-disk memory mappable chunks replay completed" duration=1µs
+turbofan-prometheus  | ts=2026-08-09T00:29:48.300Z caller=head.go:722 level=info component=tsdb msg="Replaying WAL, this may take a while"
+turbofan-prometheus  | ts=2026-08-09T00:29:48.304Z caller=head.go:794 level=info component=tsdb msg="WAL segment loaded" segment=0 maxSegment=2
+turbofan-prometheus  | ts=2026-08-09T00:29:48.306Z caller=head.go:794 level=info component=tsdb msg="WAL segment loaded" segment=1 maxSegment=2
+turbofan-prometheus  | ts=2026-08-09T00:29:48.306Z caller=head.go:794 level=info component=tsdb msg="WAL segment loaded" segment=2 maxSegment=2
+turbofan-prometheus  | ts=2026-08-09T00:29:48.306Z caller=head.go:831 level=info component=tsdb msg="WAL replay completed" checkpoint_replay_duration=9.375µs wal_replay_duration=5.708291ms wbl_replay_duration=166ns chunk_snapshot_load_duration=0s mmap_chunk_replay_duration=1µs total_replay_duration=5.728625ms
+turbofan-prometheus  | ts=2026-08-09T00:29:48.307Z caller=main.go:1218 level=info fs_type=EXT4_SUPER_MAGIC
+turbofan-prometheus  | ts=2026-08-09T00:29:48.307Z caller=main.go:1221 level=info msg="TSDB started"
+turbofan-prometheus  | ts=2026-08-09T00:29:48.307Z caller=main.go:1404 level=info msg="Loading configuration file" filename=/etc/prometheus/prometheus.yml
+turbofan-prometheus  | ts=2026-08-09T00:29:48.307Z caller=main.go:1441 level=info msg="updated GOGC" old=100 new=75
+turbofan-prometheus  | ts=2026-08-09T00:29:48.307Z caller=main.go:1452 level=info msg="Completed loading of configuration file" filename=/etc/prometheus/prometheus.yml totalDuration=260.5µs db_storage=917ns remote_storage=708ns web_handler=250ns query_engine=667ns scrape=102.417µs scrape_sd=15.25µs notify=458ns notify_sd=292ns rules=1.125µs tracing=2.041µs
+turbofan-prometheus  | ts=2026-08-09T00:29:48.307Z caller=main.go:1182 level=info msg="Server is ready to receive web requests."
+turbofan-prometheus  | ts=2026-08-09T00:29:48.307Z caller=manager.go:164 level=info component="rule manager" msg="Starting rule manager..."
+turbofan-prometheus  | ts=2026-08-09T00:43:59.946Z caller=main.go:1029 level=warn msg="Received an OS signal, exiting gracefully..." signal=terminated
+turbofan-prometheus  | ts=2026-08-09T00:43:59.946Z caller=main.go:1056 level=info msg="Stopping scrape discovery manager..."
+turbofan-prometheus  | ts=2026-08-09T00:43:59.946Z caller=main.go:1070 level=info msg="Stopping notify discovery manager..."
+turbofan-prometheus  | ts=2026-08-09T00:43:59.946Z caller=manager.go:178 level=info component="rule manager" msg="Stopping rule manager..."
+turbofan-prometheus  | ts=2026-08-09T00:43:59.946Z caller=main.go:1052 level=info msg="Scrape discovery manager stopped"
+turbofan-prometheus  | ts=2026-08-09T00:43:59.946Z caller=manager.go:188 level=info component="rule manager" msg="Rule manager stopped"
+turbofan-prometheus  | ts=2026-08-09T00:43:59.946Z caller=main.go:1107 level=info msg="Stopping scrape manager..."
+turbofan-prometheus  | ts=2026-08-09T00:43:59.947Z caller=main.go:1066 level=info msg="Notify discovery manager stopped"
+turbofan-prometheus  | ts=2026-08-09T00:43:59.948Z caller=main.go:1099 level=info msg="Scrape manager stopped"
+turbofan-prometheus  | ts=2026-08-09T00:43:59.951Z caller=notifier.go:692 level=info component=notifier msg="Stopping notification manager..."
+turbofan-prometheus  | ts=2026-08-09T00:43:59.951Z caller=notifier.go:386 level=info component=notifier msg="Draining any remaining notifications..."
+turbofan-prometheus  | ts=2026-08-09T00:43:59.951Z caller=notifier.go:392 level=info component=notifier msg="Remaining notifications drained"
+turbofan-prometheus  | ts=2026-08-09T00:43:59.951Z caller=notifier.go:322 level=info component=notifier msg="Notification manager stopped"
+turbofan-prometheus  | ts=2026-08-09T00:43:59.951Z caller=main.go:1330 level=info msg="Notifier manager stopped"
+turbofan-prometheus  | ts=2026-08-09T00:43:59.951Z caller=main.go:1342 level=info msg="See you next time!"
+[Kturbofan-prometheus exited with code 0

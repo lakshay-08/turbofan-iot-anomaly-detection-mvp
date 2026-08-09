@@ -1,0 +1,8 @@
+turbofan-simulator  | 2026-08-09 00:42:55,816 INFO turbofan_simulator {"event":"simulator_starting","host":"mqtt-broker","port":1883,"topic":"turbofan/telemetry","engines":4,"interval":0.5,"qos":1,"batch_mode":false,"telemetry_mode":"full-cmapss"}
+turbofan-simulator  | /app/mqtt_publisher.py:217: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+turbofan-simulator  |   client = mqtt.Client(client_id=config.client_id, clean_session=True, protocol=mqtt.MQTTv311)
+turbofan-simulator  | 2026-08-09 00:42:55,821 INFO turbofan_simulator {"event":"mqtt_connected","rc":0}
+turbofan-simulator  | 2026-08-09 00:43:59,947 INFO turbofan_simulator {"event":"shutdown_requested","signal":15}
+turbofan-simulator  | 2026-08-09 00:44:00,630 INFO turbofan_simulator {"event":"mqtt_disconnected","rc":0}
+turbofan-simulator  | 2026-08-09 00:44:00,630 INFO turbofan_simulator {"event":"simulator_stopped","total_published":511,"dropped_comm_loss":1}
+[Kturbofan-simulator exited with code 0

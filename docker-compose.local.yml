@@ -134,12 +134,8 @@ services:
       context: ./simulator
       dockerfile: Dockerfile
     container_name: turbofan-simulator
-    environment:
-      MQTT_HOST: mqtt-broker
-      MQTT_PORT: 1883
-      MQTT_TOPIC: turbofan/telemetry
-      SIM_ENGINES: 4
-      SIM_INTERVAL: 0.5
+    env_file:
+      - ./simulator/simulator.env
     depends_on:
       mqtt-broker:
         condition: service_started
@@ -161,6 +157,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_TOPIC: turbofan.raw.telemetry
       LOG_LEVEL: INFO
+      SERVICE_NAME: ingest-service
     command: >
       sh -c "python -m services.ingestion.service"
     depends_on:

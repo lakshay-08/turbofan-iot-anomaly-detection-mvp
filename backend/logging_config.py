@@ -10,7 +10,7 @@ from typing import Any
 from uuid import uuid4
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-LOG_ROOT = PROJECT_ROOT / "logs"
+LOG_ROOT = Path(os.getenv("LOG_ROOT", str(PROJECT_ROOT / "logs")))
 
 
 class JsonFormatter(logging.Formatter):

@@ -98,6 +98,16 @@ Structured rotating logs are written under:
 - logs/ingestion/
 - logs/inference/
 
+To mirror Docker container stdout and stderr for all compose services into the repository as well, run:
+
+- `bash scripts/collect_docker_logs.sh`
+
+This writes combined container logs under:
+
+- logs/docker/
+
+Note: direct bind-mounting of the repository `logs/` directory from Docker may require enabling this workspace path in Docker Desktop file sharing on macOS.
+
 ## Startup
 
 1. Start PostgreSQL and Kafka (or use the provided Docker Compose configuration).

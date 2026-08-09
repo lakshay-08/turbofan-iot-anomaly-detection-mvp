@@ -142,6 +142,34 @@ export SIM_FAULT_TYPES=compressor_efficiency_loss,turbine_degradation,sensor_dri
 python mqtt_publisher.py
 ```
 
+## Local Simulator Config File
+
+The Docker Compose simulator service reads its settings from:
+
+- `simulator/simulator.env`
+
+Edit that file to change values such as:
+
+- `SIM_INTERVAL`
+- `SIM_ENGINES`
+- `SIM_FAULT_RATE`
+- `SIM_BATCH_MODE`
+
+After changing the file, recreate the simulator service:
+
+```bash
+docker compose -f docker-compose.local.yml up -d --force-recreate simulator
+```
+
+You can also use the same file for local runs from the repository root:
+
+```bash
+set -a
+source simulator/simulator.env
+set +a
+python simulator/mqtt_publisher.py
+```
+
 ## Important CLI/Env Controls
 
 - `--engines` / `SIM_ENGINES`: number of engines (`1..1000`).

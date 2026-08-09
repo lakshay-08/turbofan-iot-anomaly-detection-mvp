@@ -1,0 +1,57 @@
+turbofan-postgres  | 
+turbofan-postgres  | PostgreSQL Database directory appears to contain a database; Skipping initialization
+turbofan-postgres  | 
+turbofan-postgres  | 2026-08-08 23:47:15.477 UTC [1] LOG:  starting PostgreSQL 16.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+turbofan-postgres  | 2026-08-08 23:47:15.477 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+turbofan-postgres  | 2026-08-08 23:47:15.477 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+turbofan-postgres  | 2026-08-08 23:47:15.478 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+turbofan-postgres  | 2026-08-08 23:47:15.481 UTC [29] LOG:  database system was shut down at 2026-08-08 23:47:14 UTC
+turbofan-postgres  | 2026-08-08 23:47:15.483 UTC [1] LOG:  database system is ready to accept connections
+turbofan-postgres  | 2026-08-08 23:52:15.506 UTC [27] LOG:  checkpoint starting: time
+turbofan-postgres  | 2026-08-08 23:52:17.897 UTC [27] LOG:  checkpoint complete: wrote 26 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.378 s, sync=0.007 s, total=2.391 s; sync files=15, longest=0.004 s, average=0.001 s; distance=1 kB, estimate=1 kB; lsn=0/19A0F20, redo lsn=0/19A0EE8
+turbofan-postgres  | 2026-08-09 00:02:41.831 UTC [1] LOG:  received fast shutdown request
+turbofan-postgres  | 2026-08-09 00:02:41.834 UTC [1] LOG:  aborting any active transactions
+turbofan-postgres  | 2026-08-09 00:02:41.834 UTC [143] FATAL:  terminating connection due to administrator command
+turbofan-postgres  | 2026-08-09 00:02:41.834 UTC [241] FATAL:  terminating connection due to administrator command
+turbofan-postgres  | 2026-08-09 00:02:41.834 UTC [144] FATAL:  terminating connection due to administrator command
+turbofan-postgres  | 2026-08-09 00:02:41.834 UTC [243] FATAL:  terminating connection due to administrator command
+turbofan-postgres  | 2026-08-09 00:02:41.834 UTC [242] FATAL:  terminating connection due to administrator command
+turbofan-postgres  | 2026-08-09 00:02:41.834 UTC [240] FATAL:  terminating connection due to administrator command
+turbofan-postgres  | 2026-08-09 00:02:41.838 UTC [1] LOG:  background worker "logical replication launcher" (PID 32) exited with exit code 1
+turbofan-postgres  | 2026-08-09 00:02:41.838 UTC [27] LOG:  shutting down
+turbofan-postgres  | 2026-08-09 00:02:41.839 UTC [27] LOG:  checkpoint starting: shutdown immediate
+turbofan-postgres  | 2026-08-09 00:02:41.846 UTC [27] LOG:  checkpoint complete: wrote 0 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.002 s, sync=0.001 s, total=0.008 s; sync files=0, longest=0.000 s, average=0.000 s; distance=0 kB, estimate=1 kB; lsn=0/19A0FD0, redo lsn=0/19A0FD0
+turbofan-postgres  | 2026-08-09 00:02:41.849 UTC [1] LOG:  database system is shut down
+turbofan-postgres  | 
+turbofan-postgres  | PostgreSQL Database directory appears to contain a database; Skipping initialization
+turbofan-postgres  | 
+turbofan-postgres  | 2026-08-09 00:02:49.821 UTC [1] LOG:  starting PostgreSQL 16.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+turbofan-postgres  | 2026-08-09 00:02:49.821 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+turbofan-postgres  | 2026-08-09 00:02:49.821 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+turbofan-postgres  | 2026-08-09 00:02:49.823 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+turbofan-postgres  | 2026-08-09 00:02:49.827 UTC [28] LOG:  database system was shut down at 2026-08-09 00:02:41 UTC
+turbofan-postgres  | 2026-08-09 00:02:49.835 UTC [1] LOG:  database system is ready to accept connections
+turbofan-postgres  | 2026-08-09 00:07:49.925 UTC [26] LOG:  checkpoint starting: time
+turbofan-postgres  | 2026-08-09 00:07:49.937 UTC [26] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.004 s, sync=0.002 s, total=0.012 s; sync files=2, longest=0.001 s, average=0.001 s; distance=0 kB, estimate=0 kB; lsn=0/19A10B8, redo lsn=0/19A1080
+turbofan-postgres  | 2026-08-09 00:17:50.062 UTC [26] LOG:  checkpoint starting: time
+turbofan-postgres  | 2026-08-09 00:17:51.739 UTC [26] LOG:  checkpoint complete: wrote 17 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.659 s, sync=0.010 s, total=1.677 s; sync files=12, longest=0.004 s, average=0.001 s; distance=53 kB, estimate=53 kB; lsn=0/19B56A0, redo lsn=0/19AE5E0
+turbofan-postgres  | 2026-08-09 00:22:50.774 UTC [26] LOG:  checkpoint starting: time
+turbofan-postgres  | 2026-08-09 00:23:15.379 UTC [26] LOG:  checkpoint complete: wrote 242 buffers (1.5%); 1 WAL file(s) added, 0 removed, 0 recycled; write=24.576 s, sync=0.007 s, total=24.606 s; sync files=23, longest=0.002 s, average=0.001 s; distance=3029 kB, estimate=3029 kB; lsn=0/1D17640, redo lsn=0/1CA3C90
+turbofan-postgres  | 2026-08-09 00:27:50.444 UTC [26] LOG:  checkpoint starting: time
+turbofan-postgres  | 2026-08-09 00:28:23.536 UTC [26] LOG:  checkpoint complete: wrote 326 buffers (2.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=33.079 s, sync=0.010 s, total=33.093 s; sync files=21, longest=0.002 s, average=0.001 s; distance=3255 kB, estimate=3255 kB; lsn=0/207F458, redo lsn=0/1FD1B68
+turbofan-postgres  | 2026-08-09 00:32:50.560 UTC [26] LOG:  checkpoint starting: time
+turbofan-postgres  | 2026-08-09 00:33:30.865 UTC [26] LOG:  checkpoint complete: wrote 393 buffers (2.4%); 0 WAL file(s) added, 0 removed, 1 recycled; write=40.296 s, sync=0.006 s, total=40.306 s; sync files=21, longest=0.002 s, average=0.001 s; distance=3404 kB, estimate=3404 kB; lsn=0/2404A68, redo lsn=0/2324C88
+turbofan-postgres  | 2026-08-09 00:37:50.867 UTC [26] LOG:  checkpoint starting: time
+turbofan-postgres  | 2026-08-09 00:38:31.420 UTC [26] LOG:  checkpoint complete: wrote 398 buffers (2.4%); 0 WAL file(s) added, 0 removed, 0 recycled; write=40.543 s, sync=0.005 s, total=40.553 s; sync files=21, longest=0.002 s, average=0.001 s; distance=3463 kB, estimate=3463 kB; lsn=0/278C4B0, redo lsn=0/2686988
+turbofan-postgres  | 2026-08-09 00:42:50.505 UTC [26] LOG:  checkpoint starting: time
+turbofan-postgres  | 2026-08-09 00:43:23.832 UTC [26] LOG:  checkpoint complete: wrote 331 buffers (2.0%); 1 WAL file(s) added, 0 removed, 0 recycled; write=33.290 s, sync=0.015 s, total=33.327 s; sync files=18, longest=0.003 s, average=0.001 s; distance=3292 kB, estimate=3446 kB; lsn=0/3E96840, redo lsn=0/29BDBA0
+turbofan-postgres  | 2026-08-09 00:44:01.154 UTC [1] LOG:  received fast shutdown request
+turbofan-postgres  | 2026-08-09 00:44:01.155 UTC [1] LOG:  aborting any active transactions
+turbofan-postgres  | 2026-08-09 00:44:01.155 UTC [1462] FATAL:  terminating connection due to administrator command
+turbofan-postgres  | 2026-08-09 00:44:01.155 UTC [1461] FATAL:  terminating connection due to administrator command
+turbofan-postgres  | 2026-08-09 00:44:01.156 UTC [1] LOG:  background worker "logical replication launcher" (PID 31) exited with exit code 1
+turbofan-postgres  | 2026-08-09 00:44:01.157 UTC [26] LOG:  shutting down
+turbofan-postgres  | 2026-08-09 00:44:01.157 UTC [26] LOG:  checkpoint starting: shutdown immediate
+turbofan-postgres  | 2026-08-09 00:44:01.183 UTC [26] LOG:  checkpoint complete: wrote 2294 buffers (14.0%); 0 WAL file(s) added, 0 removed, 2 recycled; write=0.012 s, sync=0.011 s, total=0.026 s; sync files=21, longest=0.006 s, average=0.001 s; distance=30215 kB, estimate=30215 kB; lsn=0/473F900, redo lsn=0/473F900
+turbofan-postgres  | 2026-08-09 00:44:01.186 UTC [1] LOG:  database system is shut down
+[Kturbofan-postgres exited with code 0
