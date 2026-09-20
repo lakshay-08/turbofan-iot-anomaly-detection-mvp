@@ -97,11 +97,28 @@ services:
   mqtt-broker:
     image: eclipse-mosquitto:2.0.18
     container_name: turbofan-mqtt-broker
+    command:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /mosquitto/config &&
+        cat > /mosquitto/config/mosquitto.conf <<'EOF'
+        persistence false
+        log_dest stdout
+
+        listener 1883 0.0.0.0
+        allow_anonymous true
+
+        listener 9001 0.0.0.0
+        protocol websockets
+        allow_anonymous true
+        EOF
+        /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf
     ports:
       - "${MQTT_PORT:-1883}:1883"
       - "${MQTT_WS_PORT:-9001}:9001"
     healthcheck:
-      test: ["CMD-SHELL", "mosquitto_pub -h localhost -t turbofan/healthcheck -m ok >/dev/null 2>&1 && mosquitto_sub -h localhost -t turbofan/healthcheck -C 1 -W 5 >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "mosquitto_pub -h localhost -t turbofan/healthcheck -m ok -q 1 >/dev/null 2>&1 || exit 1"]
       interval: 5s
       timeout: 10s
       retries: 10
@@ -118,6 +135,7 @@ services:
     container_name: turbofan-simulator
     environment:
       MQTT_HOST: ${MQTT_BROKER:-mqtt-broker}
+      MQTT_BROKER: ${MQTT_BROKER:-mqtt-broker}
       MQTT_PORT: ${MQTT_PORT:-1883}
       MQTT_TOPIC: ${MQTT_TOPIC:-turbofan/telemetry}
       SIM_ENGINES: ${SIM_ENGINES:-4}

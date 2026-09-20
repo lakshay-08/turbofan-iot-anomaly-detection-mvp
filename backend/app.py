@@ -30,6 +30,7 @@ from backend.schemas.auth import AccessTokenResponse, LoginRequest, UserCreateRe
 from backend.security.auth import create_access_token, hash_password, verify_password
 from backend.services.bootstrap import bootstrap_admin_user
 from backend.services.prediction_service import PredictionService
+from backend.services.simulator_service import LiveTelemetrySimulator, SimulationConfig
 
 LOGGER = configure_logging("backend")
 METRICS = Counter()
@@ -94,6 +95,7 @@ async def lifespan(app: FastAPI):
     finally:
         session.close()
     app.state.prediction_service = PredictionService()
+    app.state.simulator = LiveTelemetrySimulator()
     yield
 
 
@@ -376,6 +378,47 @@ def alerts() -> list[dict[str, Any]]:
         ]
     finally:
         session.close()
+
+
+@app.get("/api/simulator/status", dependencies=[Depends(require_roles("viewer", "operator", "admin"))])
+def simulator_status() -> dict[str, Any]:
+    simulator = getattr(app.state, "simulator", None)
+    if simulator is None:
+        app.state.simulator = LiveTelemetrySimulator()
+        simulator = app.state.simulator
+    return simulator.status()
+
+
+@app.post("/api/simulator/start", dependencies=[Depends(require_roles("operator", "admin"))])
+def start_simulator(payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    simulator = getattr(app.state, "simulator", None)
+    if simulator is None:
+        app.state.simulator = LiveTelemetrySimulator()
+        simulator = app.state.simulator
+
+    if payload:
+        simulator.config.engines = int(payload.get("engines", simulator.config.engines))
+        simulator.config.interval = float(payload.get("interval", simulator.config.interval))
+    simulator.start()
+    return simulator.status()
+
+
+@app.post("/api/simulator/stop", dependencies=[Depends(require_roles("operator", "admin"))])
+def stop_simulator() -> dict[str, Any]:
+    simulator = getattr(app.state, "simulator", None)
+    if simulator is not None:
+        simulator.stop()
+    return {"running": False, "engines": 0, "interval": 0.0, "max_cycles": 0}
+
+
+@app.post("/api/simulator/run-once", dependencies=[Depends(require_roles("operator", "admin"))])
+def run_simulator_once() -> dict[str, Any]:
+    simulator = getattr(app.state, "simulator", None)
+    if simulator is None:
+        app.state.simulator = LiveTelemetrySimulator()
+        simulator = app.state.simulator
+    rows = simulator.run_once()
+    return {"running": simulator.is_running(), "rows_generated": len(rows)}
 
 
 if __name__ == "__main__":

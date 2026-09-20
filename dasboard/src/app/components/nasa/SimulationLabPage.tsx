@@ -24,6 +24,7 @@ import { Button } from "../ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Slider } from "../ui/slider";
 import { Badge } from "../ui/badge";
+import { getSimulatorStatus, startSimulator, stopSimulator } from "../../services/dashboardApi";
 
 type SegmentName = "Fan" | "Compressor" | "Combustor" | "Turbine" | "Exhaust";
 type SegmentState = "healthy" | "degrading" | "critical";
@@ -217,6 +218,7 @@ export function SimulationLabPage() {
   const [running, setRunning] = useState(false);
   const [timeline, setTimeline] = useState(12);
   const [faults, setFaults] = useState<string[]>([]);
+  const [simulatorRunning, setSimulatorRunning] = useState(false);
 
   const [telemetry, setTelemetry] = useState<TelemetryState>(BASE_TELEMETRY);
 
@@ -357,12 +359,18 @@ export function SimulationLabPage() {
     setTimeline(12);
     setFaults([]);
     setTelemetry(BASE_TELEMETRY);
+    void stopSimulator().then(() => setSimulatorRunning(false)).catch(() => undefined);
   };
 
   const replay = () => {
     setTimeline(0);
     setRunning(true);
+    void startSimulator({ engines: 4, interval: 1 }).then(() => setSimulatorRunning(true)).catch(() => undefined);
   };
+
+  useEffect(() => {
+    void getSimulatorStatus().then((status) => setSimulatorRunning(status.running)).catch(() => undefined);
+  }, []);
 
   return (
     <div className="relative p-6 space-y-6 bg-background min-h-full overflow-hidden">
@@ -403,8 +411,14 @@ export function SimulationLabPage() {
             </SelectContent>
           </Select>
 
-          <Button onClick={() => setRunning(true)} className="gap-2"><Play className="w-4 h-4" />Play</Button>
-          <Button variant="outline" onClick={() => setRunning(false)} className="gap-2"><Pause className="w-4 h-4" />Pause</Button>
+          <Button onClick={() => {
+            setRunning(true);
+            void startSimulator({ engines: 4, interval: 1 }).then(() => setSimulatorRunning(true)).catch(() => undefined);
+          }} className="gap-2"><Play className="w-4 h-4" />Play</Button>
+          <Button variant="outline" onClick={() => {
+            setRunning(false);
+            void stopSimulator().then(() => setSimulatorRunning(false)).catch(() => undefined);
+          }} className="gap-2"><Pause className="w-4 h-4" />Pause</Button>
           <Button variant="outline" onClick={resetSimulation} className="gap-2"><RefreshCcw className="w-4 h-4" />Reset</Button>
           <Button variant="outline" onClick={replay} className="gap-2"><FastForward className="w-4 h-4" />Replay</Button>
 

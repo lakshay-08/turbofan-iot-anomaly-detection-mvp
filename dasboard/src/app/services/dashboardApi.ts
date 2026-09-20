@@ -123,3 +123,20 @@ export function getEngines() {
 export function getEngineDetails(engineId: string) {
   return request<ApiAnomaly[]>(`/api/engine/${encodeURIComponent(engineId)}`);
 }
+
+export function getSimulatorStatus() {
+  return request<{ running: boolean; engines: number; interval: number; max_cycles: number }>('/api/simulator/status');
+}
+
+export function startSimulator(payload?: { engines?: number; interval?: number }) {
+  return request<{ running: boolean; engines: number; interval: number; max_cycles: number }>('/api/simulator/start', {
+    method: 'POST',
+    body: JSON.stringify(payload ?? {}),
+  });
+}
+
+export function stopSimulator() {
+  return request<{ running: boolean; engines: number; interval: number; max_cycles: number }>('/api/simulator/stop', {
+    method: 'POST',
+  });
+}
