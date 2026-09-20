@@ -96,7 +96,7 @@ export function Layout() {
             <div className="space-y-6">
               <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Turbofan secure ops</p>
               <h1 className="max-w-xl text-4xl font-semibold leading-tight lg:text-6xl">
-                Predictive maintenance dashboard with JWT authentication.
+                Predictive Maintenance Dashboard
               </h1>
               <p className="max-w-2xl text-base text-slate-300 lg:text-lg">
                 Sign in to inspect live telemetry, anomaly trends, and alert workflows backed by protected API routes.
@@ -120,7 +120,7 @@ export function Layout() {
             <form onSubmit={handleLogin} className="rounded-[1.75rem] border border-white/10 bg-slate-950/70 p-6 shadow-xl">
               <div className="mb-6">
                 <p className="text-sm uppercase tracking-[0.3em] text-cyan-300">Login</p>
-                <h2 className="mt-2 text-2xl font-semibold">Access the ops console</h2>
+                <h2 className="mt-2 text-2xl font-semibold">Sign in to your account</h2>
               </div>
 
               <label className="mb-4 block">
