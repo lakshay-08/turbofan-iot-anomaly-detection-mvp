@@ -24,7 +24,7 @@ import { Button } from "../ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Slider } from "../ui/slider";
 import { Badge } from "../ui/badge";
-import { getSimulatorStatus, startSimulator, stopSimulator } from "../../services/dashboardApi";
+import { getOverview, getRecentAnomalies, getSimulatorStatus, startSimulator, stopSimulator } from "../../services/dashboardApi";
 
 type SegmentName = "Fan" | "Compressor" | "Combustor" | "Turbine" | "Exhaust";
 type SegmentState = "healthy" | "degrading" | "critical";
@@ -70,11 +70,11 @@ const BASE_TELEMETRY: TelemetryState = {
 const COMPONENT_ORDER: SegmentName[] = ["Fan", "Compressor", "Combustor", "Turbine", "Exhaust"];
 
 const INITIAL_COMPONENT_HEALTH: Record<SegmentName, number> = {
-  Fan: 98,
-  Compressor: 91,
-  Combustor: 85,
-  Turbine: 63,
-  Exhaust: 94,
+  Fan: 92,
+  Compressor: 89,
+  Combustor: 82,
+  Turbine: 61,
+  Exhaust: 90,
 };
 
 const FAULTS = ["Bearing Failure", "Fan Damage", "Fuel Leak", "Sensor Drift", "Overheating"];
@@ -294,6 +294,54 @@ export function SimulationLabPage() {
     return () => clearInterval(interval);
   }, [running, speedFactor, faults]);
 
+  useEffect(() => {
+    if (!simulatorRunning) return;
+
+    let cancelled = false;
+
+    const refreshFromBackend = async () => {
+      try {
+        const [overviewData, anomaliesData] = await Promise.all([
+          getOverview(),
+          getRecentAnomalies(1),
+        ]);
+
+        if (cancelled) return;
+
+        const latest = anomaliesData[0];
+        const latestAnomaly = Number(latest?.anomaly_score ?? 0.32);
+        const derivedRisk = clamp(Math.round(latestAnomaly * 100), 6, 99);
+        const derivedHealth = clamp(100 - derivedRisk, 12, 99);
+        const derivedRul = clamp(Math.round((1 - latestAnomaly) * 120 + 10), 0, 250);
+
+        setTelemetry((prev) => ({
+          ...prev,
+          anomaly: clamp(latestAnomaly, 0.05, 0.99),
+          risk: derivedRisk,
+          health: derivedHealth,
+          rul: derivedRul,
+          rpm: clamp(prev.rpm + (overviewData?.active_engines ? 25 : 0), 6800, 8600),
+          temperature: clamp(prev.temperature + (latestAnomaly > 0.7 ? 8 : 2), 620, 910),
+          pressure: clamp(prev.pressure - (latestAnomaly > 0.7 ? 0.7 : 0.2), 30, 58),
+          fuelFlow: clamp(prev.fuelFlow + (latestAnomaly > 0.7 ? 3 : 0.5), 62, 112),
+          vibration: clamp(prev.vibration + (latestAnomaly > 0.7 ? 0.25 : 0.06), 1.5, 7),
+        }));
+      } catch {
+        // Ignore transient backend delays and keep the local simulation values stable.
+      }
+    };
+
+    void refreshFromBackend();
+    const timer = window.setInterval(() => {
+      void refreshFromBackend();
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [simulatorRunning]);
+
   const playbackStatus: PlaybackStatus = useMemo(() => {
     if (faults.length > 0 || telemetry.risk >= 70) return "FAULT DETECTED";
     if (running) return "PLAYING";
@@ -301,7 +349,13 @@ export function SimulationLabPage() {
   }, [faults.length, telemetry.risk, running, timeline]);
 
   const componentHealth = useMemo(() => {
-    const values = { ...INITIAL_COMPONENT_HEALTH };
+    const values: Record<SegmentName, number> = {
+      Fan: clamp(100 - telemetry.risk * 0.48, 12, 99),
+      Compressor: clamp(100 - telemetry.risk * 0.36, 12, 99),
+      Combustor: clamp(100 - telemetry.risk * 0.42, 12, 99),
+      Turbine: clamp(100 - telemetry.risk * 0.5, 12, 99),
+      Exhaust: clamp(100 - telemetry.risk * 0.3, 12, 99),
+    };
 
     if (faults.includes("Fan Damage")) values.Fan -= 34;
     if (faults.includes("Bearing Failure")) values.Turbine -= 22;
@@ -315,9 +369,8 @@ export function SimulationLabPage() {
     }
     if (faults.includes("Sensor Drift")) values.Compressor -= 12;
 
-    const riskPenalty = Math.round((telemetry.risk - 30) / 7);
     COMPONENT_ORDER.forEach((name) => {
-      values[name] = clamp(values[name] - riskPenalty, 12, 99);
+      values[name] = clamp(values[name], 12, 99);
     });
 
     return values;

@@ -144,6 +144,13 @@ Note: direct bind-mounting of the repository `logs/` directory from Docker may r
 4. Start the API manually with `uvicorn backend.app:app --host 0.0.0.0 --port 8000`.
 5. Start the React dashboard with `cd dasboard && npm install && npm start`.
 
+## Documentation
+
+- API and app docs: `docs/api_collection/`
+- High-level design: `docs/hld/`
+- Executive summary: `docs/executive-summary.md`
+- ML and model docs: `docs/ml/`
+
 ## Notes
 
 The inference API remains the primary prediction path. The additional persistence and streaming components are additive and backward-compatible.

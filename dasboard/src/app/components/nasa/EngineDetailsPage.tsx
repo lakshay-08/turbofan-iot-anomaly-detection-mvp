@@ -47,16 +47,20 @@ export function EngineDetailsPage() {
 
   const hasLiveData = Boolean(engineId) && score !== null;
 
-  const engine = useMemo(
-    () => ({
+  const engine = useMemo(() => {
+    const anomalyScore = Number(score ?? 0);
+    const failureRisk = Math.min(100, Math.max(0, anomalyScore * 100));
+    const healthScore = Math.max(0, 100 - failureRisk);
+    const rul = Math.max(0, Math.round((1 - anomalyScore) * 100));
+
+    return {
       engineId: engineId || "No engine",
-      healthScore: 0,
-      rul: 0,
-      failureRisk: 0,
-      anomalyScore: score ?? 0,
-    }),
-    [engineId, score],
-  );
+      healthScore,
+      rul,
+      failureRisk,
+      anomalyScore,
+    };
+  }, [engineId, score]);
 
   const telemetryHistory = Array.from({ length: 24 }, (_, i) => ({
     t: `${i}:00`,

@@ -45,6 +45,8 @@ export function CommandCenterPage() {
   const [overview, setOverview] = useState<{ total_events: number; anomalies_detected: number; active_engines: number; models_running: number } | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
       try {
         const [overviewData, anomaliesData, alertsData, enginesData] = await Promise.all([
@@ -54,16 +56,35 @@ export function CommandCenterPage() {
           getEngines(),
         ]);
 
+        if (cancelled) return;
+
         setOverview(overviewData);
 
+        const anomalyByEngine = new Map<string, number>();
+        for (const item of anomaliesData) {
+          const score = Number(item.anomaly_score ?? 0);
+          const current = anomalyByEngine.get(item.engine_id);
+          if (current === undefined || score > current) {
+            anomalyByEngine.set(item.engine_id, score);
+          }
+        }
+
         if (enginesData.length > 0) {
-          const normalized = enginesData.map((item) => ({
-            engineId: item.engine_id,
-            status: item.engine_id ? "healthy" : "warning",
-            healthScore: 100,
-            failureRisk: 0,
-            rul: 0,
-          }));
+          const normalized = enginesData.map((item) => {
+            const latestScore = Number(anomalyByEngine.get(item.engine_id) ?? 0);
+            const failureRisk = Math.min(100, Math.max(0, latestScore * 100));
+            const healthScore = Math.max(0, 100 - failureRisk);
+            const rul = Math.max(0, Math.round((1 - latestScore) * 100));
+            const status = failureRisk > 65 ? "critical" : failureRisk > 35 ? "warning" : "healthy";
+
+            return {
+              engineId: item.engine_id,
+              status,
+              healthScore,
+              failureRisk,
+              rul,
+            };
+          });
           setEngines(normalized);
         } else {
           setEngines([]);
@@ -101,24 +122,45 @@ export function CommandCenterPage() {
           setAlertsFeed([]);
         }
       } catch {
-        setOverview(null);
-        setEngines([]);
-        setAlertsFeed([]);
+        if (!cancelled) {
+          setOverview(null);
+          setEngines([]);
+          setAlertsFeed([]);
+        }
       }
     };
 
     void load();
+    const timer = window.setInterval(() => {
+      void load();
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, []);
 
-  const trend = fleetHealthTrend();
+  const trend = useMemo(
+    () =>
+      engines.length > 0
+        ? engines.map((engine, index) => ({
+            day: `E${index + 1}`,
+            health: Math.max(0, Math.min(100, engine.healthScore)),
+            rul: Math.max(0, engine.rul),
+            predictions: Math.max(10, engine.failureRisk + 120),
+          }))
+        : [],
+    [engines],
+  );
   const hasLiveData = Boolean(overview && (overview.total_events > 0 || overview.active_engines > 0 || overview.anomalies_detected > 0)) || engines.length > 0 || alertsFeed.length > 0;
 
   const healthy = engines.filter((item) => item.status === "healthy").length;
   const warning = engines.filter((item) => item.status === "warning").length;
   const critical = engines.filter((item) => item.status === "critical").length;
 
-  const fleetHealth = Math.round(engines.reduce((sum, e) => sum + e.healthScore, 0) / engines.length);
-  const avgRul = Math.round(engines.reduce((sum, e) => sum + e.rul, 0) / engines.length);
+  const fleetHealth = engines.length > 0 ? Math.round(engines.reduce((sum, e) => sum + e.healthScore, 0) / engines.length) : 0;
+  const avgRul = engines.length > 0 ? Math.round(engines.reduce((sum, e) => sum + e.rul, 0) / engines.length) : 0;
   const criticalCount = engines.filter((item) => item.failureRisk > 65).length;
 
   const statusData = [

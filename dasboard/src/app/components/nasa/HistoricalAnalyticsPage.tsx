@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -14,30 +14,79 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { Button } from "../ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { fleetHealthTrend, getFleetSnapshot } from "./data";
+import { getAlerts, getEngines, getOverview, getRecentAnomalies } from "../../services/dashboardApi";
 
 const severityOptions = ["all", "critical", "high", "medium", "low"];
-const datasets = ["NASA CMAPSS FD001", "NASA CMAPSS FD002", "NASA CMAPSS FD003", "NASA CMAPSS FD004"];
+const datasets = ["LIVE STREAM", "ALL ENGINES", "RECENT ANOMALIES"];
 
 const heatmapSensors = ["T24", "T30", "T50", "P30", "Nf", "Nc", "epr", "far", "W31", "W32"];
 
 export function HistoricalAnalyticsPage() {
-  const engines = getFleetSnapshot();
-  const [engineId, setEngineId] = useState(engines[0].engineId);
+  const [engines, setEngines] = useState<any[]>([]);
+  const [anomalies, setAnomalies] = useState<any[]>([]);
+  const [overview, setOverview] = useState<any>(null);
+  const [engineId, setEngineId] = useState("all");
   const [dataset, setDataset] = useState(datasets[0]);
   const [dateRange, setDateRange] = useState("last-30");
   const [severity, setSeverity] = useState("all");
 
-  const timeline = useMemo(() => {
-    const trend = fleetHealthTrend();
-    return trend.map((item, i) => ({
-      label: `W${i + 1}`,
-      health: item.health - 1,
-      rul: item.rul + 12,
-      predictions: item.predictions + i * 14,
-      anomalyCount: 6 + i * 2,
-    }));
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [overviewData, anomaliesData, enginesData, alertsData] = await Promise.all([
+          getOverview(),
+          getRecentAnomalies(20),
+          getEngines(),
+          getAlerts(),
+        ]);
+
+        setOverview(overviewData);
+        setAnomalies(anomaliesData);
+
+        const engineMap = new Map<string, number>();
+        for (const item of anomaliesData) {
+          const score = Number(item.anomaly_score ?? 0);
+          const current = engineMap.get(item.engine_id);
+          if (current === undefined || score > current) engineMap.set(item.engine_id, score);
+        }
+
+        const normalized = enginesData.map((item) => {
+          const score = Number(engineMap.get(item.engine_id) ?? 0);
+          const failureRisk = Math.min(100, Math.max(0, score * 100));
+          const healthScore = Math.max(0, 100 - failureRisk);
+          const rul = Math.max(0, Math.round((1 - score) * 120));
+          return {
+            engineId: item.engine_id,
+            healthScore,
+            rul,
+            failureRisk,
+            status: failureRisk > 65 ? "critical" : failureRisk > 35 ? "warning" : "healthy",
+          };
+        });
+
+        setEngines(normalized);
+        if (normalized.length > 0) setEngineId(normalized[0].engineId);
+        if (alertsData.length > 0 && normalized.length === 0) setEngineId("all");
+      } catch {
+        setOverview(null);
+        setAnomalies([]);
+        setEngines([]);
+      }
+    };
+
+    void load();
   }, []);
+
+  const timeline = useMemo(() => {
+    const source = anomalies.length > 0 ? anomalies : [];
+    return source.slice(0, 12).reverse().map((item, i) => ({
+      label: `T${i + 1}`,
+      health: Math.max(0, 100 - Number(item.anomaly_score ?? 0) * 100),
+      rul: Math.max(0, Math.round((1 - Number(item.anomaly_score ?? 0)) * 120)),
+      predictions: Math.max(1, Number(item.anomaly_score ?? 0) * 100 + 10),
+      anomalyCount: Number(item.anomaly_score ?? 0) > 0.7 ? 10 : 4,
+    }));
+  }, [anomalies]);
 
   const failureDistribution = [
     { bucket: "0-20", count: 5 },
