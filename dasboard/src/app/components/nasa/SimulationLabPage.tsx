@@ -91,6 +91,11 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
+function formatDisplayNumber(value: number, digits = 2): string {
+  if (!Number.isFinite(value)) return `0.${"0".repeat(digits)}`;
+  return Number(value).toFixed(digits);
+}
+
 function segmentState(health: number): SegmentState {
   if (health >= 82) return "healthy";
   if (health >= 60) return "degrading";
@@ -158,7 +163,7 @@ function GaugeCard({
             <circle cx="90" cy="80" r="5" fill="hsl(var(--foreground))" />
           </svg>
           <div className="absolute inset-x-0 bottom-0 text-center">
-            <p className="text-lg font-semibold text-foreground">{value.toFixed(unit === "x" ? 2 : 0)}</p>
+            <p className="text-lg font-semibold text-foreground">{formatDisplayNumber(value, 2)}</p>
           </div>
         </div>
 
@@ -199,7 +204,7 @@ function RadialGauge({ label, value, color }: { label: string; value: number; co
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-lg font-semibold text-foreground">{Math.round(value)}%</span>
+            <span className="text-lg font-semibold text-foreground">{formatDisplayNumber(value, 2)}%</span>
           </div>
         </div>
         <div>
@@ -584,25 +589,25 @@ export function SimulationLabPage() {
             <Card className="border-border/40 bg-card/75">
               <CardContent className="p-4">
                 <p className="text-xs text-muted-foreground">Health Score</p>
-                <p className="text-2xl font-semibold text-foreground mt-1">{Math.round(telemetry.health)}%</p>
+                <p className="text-2xl font-semibold text-foreground mt-1">{formatDisplayNumber(telemetry.health, 2)}%</p>
               </CardContent>
             </Card>
             <Card className="border-border/40 bg-card/75">
               <CardContent className="p-4">
                 <p className="text-xs text-muted-foreground">Failure Risk</p>
-                <p className="text-2xl font-semibold text-red-500 mt-1">{Math.round(telemetry.risk)}%</p>
+                <p className="text-2xl font-semibold text-red-500 mt-1">{formatDisplayNumber(telemetry.risk, 2)}%</p>
               </CardContent>
             </Card>
             <Card className="border-border/40 bg-card/75">
               <CardContent className="p-4">
                 <p className="text-xs text-muted-foreground">Remaining Useful Life</p>
-                <p className="text-2xl font-semibold text-foreground mt-1">{Math.round(telemetry.rul)} cycles</p>
+                <p className="text-2xl font-semibold text-foreground mt-1">{formatDisplayNumber(telemetry.rul, 2)} cycles</p>
               </CardContent>
             </Card>
             <Card className="border-border/40 bg-card/75">
               <CardContent className="p-4">
                 <p className="text-xs text-muted-foreground">Current Anomaly Score</p>
-                <p className="text-2xl font-semibold text-amber-500 mt-1">{telemetry.anomaly.toFixed(2)}</p>
+                <p className="text-2xl font-semibold text-amber-500 mt-1">{formatDisplayNumber(telemetry.anomaly, 2)}</p>
               </CardContent>
             </Card>
           </div>

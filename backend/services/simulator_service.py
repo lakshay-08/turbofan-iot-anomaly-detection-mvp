@@ -37,19 +37,31 @@ class LiveTelemetrySimulator:
         self._prediction_service = PredictionService()
 
     def _init_engine_state(self, engine_id: int) -> dict[str, Any]:
+        profiles = [
+            {"name": "baseline", "degradation": 0.95, "heat_bias": 0.0, "sensor_bias": 1.0},
+            {"name": "high_load", "degradation": 1.18, "heat_bias": 0.06, "sensor_bias": 1.08},
+            {"name": "thermal", "degradation": 1.32, "heat_bias": 0.1, "sensor_bias": 1.14},
+            {"name": "stressed", "degradation": 1.48, "heat_bias": 0.14, "sensor_bias": 1.2},
+        ]
+        profile = profiles[(engine_id - 1) % len(profiles)]
+
         return {
             "engine_id": engine_id,
             "cycle": 0,
             "health": 0.95,
+            "profile": profile["name"],
+            "degradation_rate": profile["degradation"],
+            "heat_bias": profile["heat_bias"],
+            "sensor_bias": profile["sensor_bias"],
             "base": {
-                "sensor_2": 600.0,
-                "sensor_3": 1500.0,
-                "sensor_4": 1350.0,
-                "sensor_8": 2300.0,
-                "sensor_9": 9000.0,
-                "sensor_11": 45.0,
-                "sensor_13": 2350.0,
-                "sensor_17": 380.0,
+                "sensor_2": 600.0 * profile["sensor_bias"],
+                "sensor_3": 1500.0 * profile["sensor_bias"],
+                "sensor_4": 1350.0 * profile["sensor_bias"],
+                "sensor_8": 2300.0 * profile["sensor_bias"],
+                "sensor_9": 9000.0 * profile["sensor_bias"],
+                "sensor_11": 45.0 * profile["sensor_bias"],
+                "sensor_13": 2350.0 * profile["sensor_bias"],
+                "sensor_17": 380.0 * profile["sensor_bias"],
             },
         }
 
@@ -59,18 +71,23 @@ class LiveTelemetrySimulator:
             current_cycle = cycle if cycle is not None else state["cycle"] + 1
             state["cycle"] = current_cycle
 
-            drift = 1.0 + (current_cycle / 100.0)
-            wave = self.random.uniform(-0.12, 0.12)
+            profile_factor = state["degradation_rate"]
+            drift = 1.0 + (current_cycle / 90.0) * profile_factor
+            wave = self.random.uniform(-0.12, 0.12) + (engine_id * 0.015)
+            engine_heat = state["heat_bias"] * (current_cycle / 50.0)
             feature_values = {
-                "sensor_2": state["base"]["sensor_2"] * drift + wave * 70,
-                "sensor_3": state["base"]["sensor_3"] * drift + wave * 160,
-                "sensor_4": state["base"]["sensor_4"] * drift + wave * 150,
-                "sensor_8": state["base"]["sensor_8"] * drift + wave * 220,
-                "sensor_9": state["base"]["sensor_9"] * drift + wave * 120,
-                "sensor_11": state["base"]["sensor_11"] * (1.0 + current_cycle / 200.0) + wave * 8,
-                "sensor_13": state["base"]["sensor_13"] * drift + wave * 190,
-                "sensor_17": state["base"]["sensor_17"] * (1.0 + current_cycle / 180.0) + wave * 24,
+                "sensor_2": state["base"]["sensor_2"] * drift + wave * 70 + engine_id * 12,
+                "sensor_3": state["base"]["sensor_3"] * drift + wave * 160 + engine_id * 20,
+                "sensor_4": state["base"]["sensor_4"] * drift + wave * 150 + engine_id * 18,
+                "sensor_8": state["base"]["sensor_8"] * drift + wave * 220 + engine_id * 25,
+                "sensor_9": state["base"]["sensor_9"] * drift + wave * 120 + engine_id * 30,
+                "sensor_11": state["base"]["sensor_11"] * (1.0 + current_cycle / 180.0) + wave * 8 + engine_id * 1.6,
+                "sensor_13": state["base"]["sensor_13"] * drift + wave * 190 + engine_id * 22,
+                "sensor_17": state["base"]["sensor_17"] * (1.0 + current_cycle / 150.0) + wave * 24 + engine_id * 3.4,
             }
+
+            health_score = max(0.2, 1.0 - (current_cycle / 120.0) * profile_factor - (engine_id * 0.012))
+            anomaly_score = min(0.99, max(0.08, 0.18 + (current_cycle / 150.0) * profile_factor + (engine_id * 0.025) + abs(wave) * 0.7 + engine_heat))
 
             payload = {
                 "event_id": str(uuid.uuid4()),
@@ -81,16 +98,17 @@ class LiveTelemetrySimulator:
                 "source": "simulator",
                 "features": feature_values,
                 "prediction_features": feature_values,
-                "health_score": round(max(0.2, 1.0 - (current_cycle / 120.0)), 4),
+                "health_score": round(health_score, 4),
                 "metadata": {
                     "source": "simulator",
                     "simulator_cycle": current_cycle,
                     "engine_id": engine_id,
+                    "engine_profile": state["profile"],
                     "generated_at": datetime.now(timezone.utc).isoformat(),
                 },
             }
             result = self._prediction_service.predict(payload)
-            payload["anomaly_score"] = result.anomaly_score
+            payload["anomaly_score"] = float(result.anomaly_score) + (anomaly_score * 0.15)
             payload["is_anomaly"] = result.is_anomaly
             payload["threshold"] = result.threshold
             payload["model_name"] = result.model_name
