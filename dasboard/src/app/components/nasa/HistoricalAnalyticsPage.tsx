@@ -21,6 +21,30 @@ const datasets = ["LIVE STREAM", "ALL ENGINES", "RECENT ANOMALIES"];
 
 const heatmapSensors = ["T24", "T30", "T50", "P30", "Nf", "Nc", "epr", "far", "W31", "W32"];
 
+function getSeverityLabel(score: number): string {
+  if (score >= 0.8) return "critical";
+  if (score >= 0.6) return "high";
+  if (score >= 0.4) return "medium";
+  return "low";
+}
+
+function matchesDateRange(timestamp: string | undefined, range: string): boolean {
+  if (!timestamp) return true;
+
+  try {
+    const value = new Date(timestamp).getTime();
+    const now = Date.now();
+    const diffDays = (now - value) / (1000 * 60 * 60 * 24);
+
+    if (range === "last-7") return diffDays <= 7;
+    if (range === "last-30") return diffDays <= 30;
+    if (range === "last-90") return diffDays <= 90;
+    return true;
+  } catch {
+    return true;
+  }
+}
+
 export function HistoricalAnalyticsPage() {
   const [engines, setEngines] = useState<any[]>([]);
   const [anomalies, setAnomalies] = useState<any[]>([]);
@@ -35,7 +59,7 @@ export function HistoricalAnalyticsPage() {
       try {
         const [overviewData, anomaliesData, enginesData, alertsData] = await Promise.all([
           getOverview(),
-          getRecentAnomalies(20),
+          getRecentAnomalies(200),
           getEngines(),
           getAlerts(),
         ]);
@@ -65,7 +89,7 @@ export function HistoricalAnalyticsPage() {
         });
 
         setEngines(normalized);
-        if (normalized.length > 0) setEngineId(normalized[0].engineId);
+        if (normalized.length > 0 && engineId === "all") setEngineId("all");
         if (alertsData.length > 0 && normalized.length === 0) setEngineId("all");
       } catch {
         setOverview(null);
@@ -77,8 +101,28 @@ export function HistoricalAnalyticsPage() {
     void load();
   }, []);
 
+  const filteredAnomalies = useMemo(() => {
+    const selectedSeverity = severity === "all" ? null : severity;
+
+    return anomalies.filter((item) => {
+      const score = Number(item.anomaly_score ?? 0);
+      const itemSeverity = getSeverityLabel(score);
+      const engineMatches = engineId === "all" || String(item.engine_id) === String(engineId);
+      const severityMatches = !selectedSeverity || itemSeverity === selectedSeverity;
+      const dateMatches = matchesDateRange(item.timestamp, dateRange);
+      const datasetMatches =
+        dataset === "LIVE STREAM"
+          ? true
+          : dataset === "RECENT ANOMALIES"
+            ? score > 0.25
+            : true;
+
+      return engineMatches && severityMatches && dateMatches && datasetMatches;
+    });
+  }, [anomalies, dateRange, dataset, engineId, severity]);
+
   const timeline = useMemo(() => {
-    const source = anomalies.length > 0 ? anomalies : [];
+    const source = filteredAnomalies.length > 0 ? filteredAnomalies : [];
     return source.slice(0, 12).reverse().map((item, i) => ({
       label: `T${i + 1}`,
       health: Math.max(0, 100 - Number(item.anomaly_score ?? 0) * 100),
@@ -86,21 +130,33 @@ export function HistoricalAnalyticsPage() {
       predictions: Math.max(1, Number(item.anomaly_score ?? 0) * 100 + 10),
       anomalyCount: Number(item.anomaly_score ?? 0) > 0.7 ? 10 : 4,
     }));
-  }, [anomalies]);
+  }, [filteredAnomalies]);
 
-  const failureDistribution = [
-    { bucket: "0-20", count: 5 },
-    { bucket: "21-40", count: 11 },
-    { bucket: "41-60", count: 17 },
-    { bucket: "61-80", count: 13 },
-    { bucket: "81-100", count: 6 },
-  ];
+  const failureDistribution = useMemo(() => {
+    const buckets = ["0-20", "21-40", "41-60", "61-80", "81-100"];
+    const counts = new Array(buckets.length).fill(0);
 
-  const comparison = engines.slice(0, 5).map((item) => ({
-    engineId: item.engineId,
-    health: item.healthScore,
-    rul: item.rul,
-  }));
+    filteredAnomalies.forEach((item) => {
+      const score = Number(item.anomaly_score ?? 0) * 100;
+      if (score <= 20) counts[0] += 1;
+      else if (score <= 40) counts[1] += 1;
+      else if (score <= 60) counts[2] += 1;
+      else if (score <= 80) counts[3] += 1;
+      else counts[4] += 1;
+    });
+
+    return buckets.map((bucket, index) => ({ bucket, count: counts[index] }));
+  }, [filteredAnomalies]);
+
+  const comparison = useMemo(
+    () =>
+      (engineId === "all" ? engines : engines.filter((item) => String(item.engineId) === String(engineId))).slice(0, 5).map((item) => ({
+        engineId: item.engineId,
+        health: item.healthScore,
+        rul: item.rul,
+      })),
+    [engineId, engines],
+  );
 
   return (
     <div className="p-6 space-y-6 bg-background min-h-full">
@@ -120,6 +176,7 @@ export function HistoricalAnalyticsPage() {
           <Select value={engineId} onValueChange={setEngineId}>
             <SelectTrigger><SelectValue placeholder="Engine ID" /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">All Engines</SelectItem>
               {engines.map((engine) => (
                 <SelectItem key={engine.engineId} value={engine.engineId}>{engine.engineId}</SelectItem>
               ))}
@@ -319,15 +376,26 @@ export function HistoricalAnalyticsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {timeline.slice(0, 6).map((point, idx) => (
-                <TableRow key={point.label}>
-                  <TableCell>{engines[idx % engines.length].engineId}</TableCell>
-                  <TableCell>2026-07-{20 + idx} 11:2{idx}:00</TableCell>
-                  <TableCell>{idx % 2 === 0 ? "HIGH" : "MEDIUM"}</TableCell>
-                  <TableCell>{(0.41 + idx * 0.08).toFixed(2)}</TableCell>
-                  <TableCell>{idx % 2 === 0 ? "Combustor instability" : "Sensor drift"}</TableCell>
+              {filteredAnomalies.slice(0, 6).map((item, idx) => {
+                const score = Number(item.anomaly_score ?? 0);
+                const severityLabel = getSeverityLabel(score).toUpperCase();
+                return (
+                  <TableRow key={`${item.id ?? item.event_id ?? idx}`}>
+                    <TableCell>{item.engine_id}</TableCell>
+                    <TableCell>{item.timestamp ?? "—"}</TableCell>
+                    <TableCell>{severityLabel}</TableCell>
+                    <TableCell>{score.toFixed(2)}</TableCell>
+                    <TableCell>{score > 0.7 ? "Combustor instability" : "Sensor drift"}</TableCell>
+                  </TableRow>
+                );
+              })}
+              {filteredAnomalies.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                    No historical records match the selected filters.
+                  </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>
