@@ -16,15 +16,16 @@ import { getFleetSnapshot } from "./data";
 import { getEngineDetails, getEngines } from "../../services/dashboardApi";
 
 export function EngineDetailsPage() {
-  const fallbackEngine = getFleetSnapshot()[4];
-  const [engineId, setEngineId] = useState(fallbackEngine.engineId);
-  const [score, setScore] = useState(fallbackEngine.anomalyScore);
+  const [engineId, setEngineId] = useState("");
+  const [score, setScore] = useState<number | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
         const engines = await getEngines();
         if (engines.length === 0) {
+          setEngineId("");
+          setScore(null);
           return;
         }
         const selectedEngineId = engines[0].engine_id;
@@ -32,19 +33,29 @@ export function EngineDetailsPage() {
         const details = await getEngineDetails(selectedEngineId);
         if (details.length > 0) {
           setScore(details[details.length - 1].anomaly_score);
+        } else {
+          setScore(null);
         }
       } catch {
-        setEngineId(fallbackEngine.engineId);
-        setScore(fallbackEngine.anomalyScore);
+        setEngineId("");
+        setScore(null);
       }
     };
 
     void load();
-  }, [fallbackEngine.anomalyScore, fallbackEngine.engineId]);
+  }, []);
+
+  const hasLiveData = Boolean(engineId) && score !== null;
 
   const engine = useMemo(
-    () => ({ ...fallbackEngine, engineId, anomalyScore: score }),
-    [engineId, fallbackEngine, score],
+    () => ({
+      engineId: engineId || "No engine",
+      healthScore: 0,
+      rul: 0,
+      failureRisk: 0,
+      anomalyScore: score ?? 0,
+    }),
+    [engineId, score],
   );
 
   const telemetryHistory = Array.from({ length: 24 }, (_, i) => ({
@@ -56,6 +67,17 @@ export function EngineDetailsPage() {
     rul: Math.max(20, engine.rul - i),
     risk: Math.min(99, engine.failureRisk + i),
   }));
+
+  if (!hasLiveData) {
+    return (
+      <div className="p-6 bg-background min-h-full">
+        <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center">
+          <h1 className="text-2xl font-semibold text-foreground">Engine Details</h1>
+          <p className="mt-2 text-muted-foreground">No live engine telemetry available yet. Start the simulator to populate this view.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 bg-background min-h-full">

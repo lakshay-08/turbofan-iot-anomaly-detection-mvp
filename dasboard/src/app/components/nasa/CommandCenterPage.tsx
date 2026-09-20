@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "../ui/table";
 import { NasaMetricCard } from "./NasaMetricCard";
-import { alerts, fleetHealthTrend, getFleetSnapshot, toStatusLabel } from "./data";
+import { fleetHealthTrend, toStatusLabel } from "./data";
 import { getAlerts, getEngines, getOverview, getRecentAnomalies } from "../../services/dashboardApi";
 
 const chartColors = ["#22c55e", "#eab308", "#ef4444", "#3b82f6", "#14b8a6"];
@@ -40,9 +40,8 @@ type DashboardAlert = {
 };
 
 export function CommandCenterPage() {
-  const fallbackEngines = getFleetSnapshot();
-  const [engines, setEngines] = useState(fallbackEngines);
-  const [alertsFeed, setAlertsFeed] = useState<DashboardAlert[]>(alerts);
+  const [engines, setEngines] = useState<any[]>([]);
+  const [alertsFeed, setAlertsFeed] = useState<DashboardAlert[]>([]);
   const [overview, setOverview] = useState<{ total_events: number; anomalies_detected: number; active_engines: number; models_running: number } | null>(null);
 
   useEffect(() => {
@@ -58,14 +57,16 @@ export function CommandCenterPage() {
         setOverview(overviewData);
 
         if (enginesData.length > 0) {
-          const normalized = enginesData.map((item, index) => {
-            const seed = fallbackEngines[index % fallbackEngines.length];
-            return {
-              ...seed,
-              engineId: item.engine_id,
-            };
-          });
+          const normalized = enginesData.map((item) => ({
+            engineId: item.engine_id,
+            status: item.engine_id ? "healthy" : "warning",
+            healthScore: 100,
+            failureRisk: 0,
+            rul: 0,
+          }));
           setEngines(normalized);
+        } else {
+          setEngines([]);
         }
 
         if (alertsData.length > 0) {
@@ -96,16 +97,21 @@ export function CommandCenterPage() {
               recommendation: "Inspect engine and validate sensor baseline.",
             })),
           );
+        } else {
+          setAlertsFeed([]);
         }
       } catch {
         setOverview(null);
+        setEngines([]);
+        setAlertsFeed([]);
       }
     };
 
     void load();
-  }, [fallbackEngines]);
+  }, []);
 
   const trend = fleetHealthTrend();
+  const hasLiveData = Boolean(overview && (overview.total_events > 0 || overview.active_engines > 0 || overview.anomalies_detected > 0)) || engines.length > 0 || alertsFeed.length > 0;
 
   const healthy = engines.filter((item) => item.status === "healthy").length;
   const warning = engines.filter((item) => item.status === "warning").length;
@@ -122,6 +128,17 @@ export function CommandCenterPage() {
   ];
 
   const topRisk = useMemo(() => [...engines].sort((a, b) => b.failureRisk - a.failureRisk).slice(0, 5), [engines]);
+
+  if (!hasLiveData) {
+    return (
+      <div className="p-6 bg-background min-h-full">
+        <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center">
+          <h1 className="text-2xl font-semibold text-foreground">Command Center</h1>
+          <p className="mt-2 text-muted-foreground">No live telemetry available yet. Start the simulator to begin streaming engine data.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 bg-background min-h-full">
