@@ -123,7 +123,11 @@ def login(payload: LoginRequest) -> AccessTokenResponse:
     session = SessionLocal()
     try:
         repository = UserRepository(session)
-        user = repository.get_by_email(payload.email)
+        identity = (payload.email or payload.username or "").strip()
+        if not identity:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Either email or username is required")
+
+        user = repository.get_by_email(identity)
         if user is None or not verify_password(payload.password, user.password_hash):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 

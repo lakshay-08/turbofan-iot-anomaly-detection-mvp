@@ -1,6 +1,6 @@
 """initial security and event schema
 
-Revision ID: 0001_initial_security_and_event_schema
+Revision ID: 0001_initial_security_event
 Revises: 
 Create Date: 2026-08-09 00:00:00.000000
 """
@@ -13,7 +13,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "0001_initial_security_and_event_schema"
+revision = "0001_initial_security_event"
 down_revision = None
 branch_labels = None
 depends_on = None
