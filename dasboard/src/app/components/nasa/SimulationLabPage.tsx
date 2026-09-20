@@ -87,13 +87,17 @@ const SPEED_FACTORS: Record<string, number> = {
   "50x": 50,
 };
 
+function roundTo(value: number, digits = 2): number {
+  return Number(value.toFixed(digits));
+}
+
 function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
+  return roundTo(Math.max(min, Math.min(max, value))); 
 }
 
 function formatDisplayNumber(value: number, digits = 2): string {
   if (!Number.isFinite(value)) return `0.${"0".repeat(digits)}`;
-  return Number(value).toFixed(digits);
+  return roundTo(value, digits).toFixed(digits);
 }
 
 function segmentState(health: number): SegmentState {
@@ -551,7 +555,7 @@ export function SimulationLabPage() {
                             )}
                             <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-1">
                               <span className="text-xs text-white/90">{segment}</span>
-                              <span className="text-base text-white font-semibold">{componentHealth[segment]}%</span>
+                              <span className="text-base text-white font-semibold">{formatDisplayNumber(componentHealth[segment], 2)}%</span>
                             </div>
                           </div>
                         </div>
