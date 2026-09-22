@@ -8,12 +8,23 @@ interface NasaMetricCardProps {
 
 export function NasaMetricCard({ title, value, subtitle }: NasaMetricCardProps) {
   return (
-    <Card className="border-border/30 shadow-sm bg-card/80 backdrop-blur-sm">
+    <Card className="border-border/30 shadow-sm bg-card/80 backdrop-blur-sm h-full">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-semibold text-foreground">{value}</div>
+        <div
+          className="text-2xl font-semibold text-foreground"
+          style={{
+            fontVariantNumeric: "tabular-nums",
+            whiteSpace: "nowrap",
+            minHeight: "2.5rem",
+            display: "flex",
+            alignItems: "flex-end",
+          }}
+        >
+          {value}
+        </div>
         <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
       </CardContent>
     </Card>

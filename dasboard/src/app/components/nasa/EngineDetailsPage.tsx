@@ -49,8 +49,8 @@ export function EngineDetailsPage() {
 
   const engine = useMemo(() => {
     const anomalyScore = Number(score ?? 0);
-    const failureRisk = Math.min(100, Math.max(0, anomalyScore * 100));
-    const healthScore = Math.max(0, 100 - failureRisk);
+    const failureRisk = Number(Math.min(100, Math.max(0, anomalyScore * 100)).toFixed(2));
+    const healthScore = Number(Math.max(0, 100 - failureRisk).toFixed(2));
     const rul = Math.max(0, Math.round((1 - anomalyScore) * 100));
 
     return {
@@ -96,9 +96,9 @@ export function EngineDetailsPage() {
           <CardDescription>Current predictive maintenance status</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <NasaMetricCard title="Health Score" value={`${engine.healthScore}%`} subtitle="Model weighted score" />
+          <NasaMetricCard title="Health Score" value={`${engine.healthScore.toFixed(2)}%`} subtitle="Model weighted score" />
           <NasaMetricCard title="Current RUL" value={`${engine.rul} cycles`} subtitle="Estimated cycles remaining" />
-          <NasaMetricCard title="Failure Risk" value={`${engine.failureRisk}%`} subtitle="Probabilistic risk estimate" />
+          <NasaMetricCard title="Failure Risk" value={`${engine.failureRisk.toFixed(2)}%`} subtitle="Probabilistic risk estimate" />
         </CardContent>
       </Card>
 

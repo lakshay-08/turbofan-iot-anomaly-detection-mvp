@@ -69,6 +69,23 @@ services:
     networks:
       - turbofan-net
 
+  prometheus:
+    build:
+      context: .
+      dockerfile: monitoring/Dockerfile.prometheus
+    image: turbofan-prometheus:${APP_TAG:-local}
+    container_name: turbofan-prometheus
+    volumes:
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      backend-api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - turbofan-net
+
   dashboard:
     build:
       context: .
@@ -183,3 +200,4 @@ networks:
 
 volumes:
   postgres-data:
+  prometheus-data:

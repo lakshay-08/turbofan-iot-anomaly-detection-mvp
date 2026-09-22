@@ -159,7 +159,7 @@ export function CommandCenterPage() {
   const warning = engines.filter((item) => item.status === "warning").length;
   const critical = engines.filter((item) => item.status === "critical").length;
 
-  const fleetHealth = engines.length > 0 ? Math.round(engines.reduce((sum, e) => sum + e.healthScore, 0) / engines.length) : 0;
+  const fleetHealth = engines.length > 0 ? Number((engines.reduce((sum, e) => sum + e.healthScore, 0) / engines.length).toFixed(2)) : 0;
   const avgRul = engines.length > 0 ? Math.round(engines.reduce((sum, e) => sum + e.rul, 0) / engines.length) : 0;
   const criticalCount = engines.filter((item) => item.failureRisk > 65).length;
 
@@ -190,7 +190,7 @@ export function CommandCenterPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
-        <NasaMetricCard title="Fleet Health Score" value={`${fleetHealth}%`} subtitle="Weighted fleet score" />
+        <NasaMetricCard title="Fleet Health Score" value={`${fleetHealth.toFixed(2)}%`} subtitle="Weighted fleet score" />
         <NasaMetricCard title="Active Engines" value={`${overview?.active_engines ?? engines.length}`} subtitle="Streaming telemetry online" />
         <NasaMetricCard title="Critical Engines" value={`${criticalCount}`} subtitle="Risk score > 65%" />
         <NasaMetricCard title="Average RUL" value={`${avgRul} cycles`} subtitle="Remaining useful life" />
