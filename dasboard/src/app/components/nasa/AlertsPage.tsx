@@ -29,14 +29,16 @@ const trendData = [
 ];
 
 export function AlertsPage() {
-  const [alertsFeed, setAlertsFeed] = useState(alerts);
-  const [selectedAlertId, setSelectedAlertId] = useState(alerts[0].id);
+  const [alertsFeed, setAlertsFeed] = useState<typeof alerts>([]);
+  const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
         const apiAlerts = await getAlerts();
         if (apiAlerts.length === 0) {
+          setAlertsFeed([]);
+          setSelectedAlertId(null);
           return;
         }
         const mapped = apiAlerts.map((item) => ({
@@ -51,16 +53,17 @@ export function AlertsPage() {
           recommendation: "Review telemetry history and investigate engine condition.",
         }));
         setAlertsFeed(mapped);
-        setSelectedAlertId(mapped[0].id);
+        setSelectedAlertId(mapped[0]?.id ?? null);
       } catch {
-        setAlertsFeed(alerts);
+        setAlertsFeed([]);
+        setSelectedAlertId(null);
       }
     };
 
     void load();
   }, []);
 
-  const selected = alertsFeed.find((item) => item.id === selectedAlertId) ?? alertsFeed[0] ?? alerts[0];
+  const selected = alertsFeed.find((item) => item.id === selectedAlertId) ?? alertsFeed[0] ?? null;
 
   const summary = {
     critical: alertsFeed.filter((item) => item.severity === "critical").length,
@@ -128,69 +131,79 @@ export function AlertsPage() {
         </Card>
       </div>
 
-      <Card className="border-border/30 shadow-sm bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle>Alert Table</CardTitle>
-          <CardDescription>Engine ID, severity, score, description, timestamp, and status</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Engine ID</TableHead>
-                <TableHead>Severity</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Timestamp</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Details</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {alertsFeed.map((alert) => (
-                <TableRow key={alert.id}>
-                  <TableCell className="font-medium">{alert.engineId}</TableCell>
-                  <TableCell>
-                    <Badge className={severityBadgeClass(alert.severity)} variant="outline">{alert.severity.toUpperCase()}</Badge>
-                  </TableCell>
-                  <TableCell>{alert.score.toFixed(2)}</TableCell>
-                  <TableCell>{alert.description}</TableCell>
-                  <TableCell>{alert.timestamp}</TableCell>
-                  <TableCell>{alert.status}</TableCell>
-                  <TableCell>
-                    <Drawer>
-                      <DrawerTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={() => setSelectedAlertId(alert.id)}>View</Button>
-                      </DrawerTrigger>
-                      <DrawerContent>
-                        <DrawerHeader>
-                          <DrawerTitle>Alert Details: {selected.id}</DrawerTitle>
-                          <DrawerDescription>{selected.engineId} | {selected.description}</DrawerDescription>
-                        </DrawerHeader>
-                        <div className="px-4 space-y-3">
-                          <div className="p-3 rounded-lg bg-muted/50">
-                            <p className="text-sm font-medium">Root Cause Analysis</p>
-                            <p className="text-sm text-muted-foreground mt-1">{selected.rootCause}</p>
-                          </div>
-                          <div className="p-3 rounded-lg bg-muted/50">
-                            <p className="text-sm font-medium">Recommended Actions</p>
-                            <p className="text-sm text-muted-foreground mt-1">{selected.recommendation}</p>
-                          </div>
-                        </div>
-                        <DrawerFooter>
-                          <DrawerClose asChild>
-                            <Button variant="outline">Close</Button>
-                          </DrawerClose>
-                        </DrawerFooter>
-                      </DrawerContent>
-                    </Drawer>
-                  </TableCell>
+      {alertsFeed.length === 0 ? (
+        <Card className="border-border/30 shadow-sm bg-card/80 backdrop-blur-sm">
+          <CardContent className="p-8 text-center text-muted-foreground">
+            No alerts are currently available from the backend.
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-border/30 shadow-sm bg-card/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle>Alert Table</CardTitle>
+            <CardDescription>Engine ID, severity, score, description, timestamp, and status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Engine ID</TableHead>
+                  <TableHead>Severity</TableHead>
+                  <TableHead>Score</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Details</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {alertsFeed.map((alert) => (
+                  <TableRow key={alert.id}>
+                    <TableCell className="font-medium">{alert.engineId}</TableCell>
+                    <TableCell>
+                      <Badge className={severityBadgeClass(alert.severity)} variant="outline">{alert.severity.toUpperCase()}</Badge>
+                    </TableCell>
+                    <TableCell>{Number(alert.score ?? 0).toFixed(2)}</TableCell>
+                    <TableCell>{alert.description}</TableCell>
+                    <TableCell>{alert.timestamp}</TableCell>
+                    <TableCell>{alert.status}</TableCell>
+                    <TableCell>
+                      <Drawer>
+                        <DrawerTrigger asChild>
+                          <Button size="sm" variant="outline" onClick={() => setSelectedAlertId(alert.id)}>View</Button>
+                        </DrawerTrigger>
+                        {selected && selected.id === alert.id && (
+                          <DrawerContent>
+                            <DrawerHeader>
+                              <DrawerTitle>Alert Details: {selected.id}</DrawerTitle>
+                              <DrawerDescription>{selected.engineId} | {selected.description}</DrawerDescription>
+                            </DrawerHeader>
+                            <div className="px-4 space-y-3">
+                              <div className="p-3 rounded-lg bg-muted/50">
+                                <p className="text-sm font-medium">Root Cause Analysis</p>
+                                <p className="text-sm text-muted-foreground mt-1">{selected.rootCause}</p>
+                              </div>
+                              <div className="p-3 rounded-lg bg-muted/50">
+                                <p className="text-sm font-medium">Recommended Actions</p>
+                                <p className="text-sm text-muted-foreground mt-1">{selected.recommendation}</p>
+                              </div>
+                            </div>
+                            <DrawerFooter>
+                              <DrawerClose asChild>
+                                <Button variant="outline">Close</Button>
+                              </DrawerClose>
+                            </DrawerFooter>
+                          </DrawerContent>
+                        )}
+                      </Drawer>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
