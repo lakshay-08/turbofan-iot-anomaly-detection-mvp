@@ -1,0 +1,24 @@
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: turbofan-mqtt-broker
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+
+  turbofan-simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: turbofan-simulator
+    depends_on:
+      - mqtt-broker
+    environment:
+      MQTT_HOST: mqtt-broker
+      MQTT_PORT: 1883
+      MQTT_TOPIC: turbofan/telemetry
+      SIM_ENGINES: 8
+      SIM_INTERVAL: 0.5
+      SIM_BATCH_MODE: false
+      SIM_DEBUG: false
+    command: ["python", "mqtt_publisher.py"]

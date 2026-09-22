@@ -1,0 +1,38 @@
+{
+  "accuracy": 0.8495954692556634,
+  "confusion_matrix": [
+    [
+      19454,
+      2166
+    ],
+    [
+      1552,
+      1548
+    ]
+  ],
+  "eval_reconstruction_error_mean": 0.000470161680037883,
+  "eval_reconstruction_error_std": 0.0014606770872364146,
+  "f1": 0.45435867331963603,
+  "feature_columns": [
+    "sensor_11",
+    "sensor_4",
+    "sensor_13",
+    "sensor_8",
+    "sensor_17",
+    "sensor_3",
+    "sensor_2",
+    "sensor_9"
+  ],
+  "inference_ms_per_sample": 0.008798157687948468,
+  "inference_seconds_total": 0.21749045804608613,
+  "n_eval_samples": 24720,
+  "n_train_normal": 4250,
+  "pr_auc": 0.4341442705906221,
+  "precision": 0.4168012924071082,
+  "recall": 0.4993548387096774,
+  "roc_auc": 0.8393861120229177,
+  "threshold": 0.0006593337166123092,
+  "threshold_percentile": 95.0,
+  "train_reconstruction_error_mean": 0.00024156362633220851,
+  "train_reconstruction_error_std": 0.0002538762637414038
+}

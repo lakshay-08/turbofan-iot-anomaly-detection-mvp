@@ -1,0 +1,17 @@
+{
+  "feature_columns": [
+    "sensor_11",
+    "sensor_4",
+    "sensor_13",
+    "sensor_8",
+    "sensor_17",
+    "sensor_3",
+    "sensor_2",
+    "sensor_9"
+  ],
+  "n_train_rows": 4250,
+  "n_validation_rows": 750,
+  "random_state": 42,
+  "train_source": "/Users/apple/Desktop/Projects/Working Projects/turbofan-iot-anomaly-detection-mvp/data/processed/train/fd003_healthy_baseline.csv",
+  "validation_fraction": 0.15
+}

@@ -1,0 +1,40 @@
+{
+  "accuracy": 0.8847087378640777,
+  "confusion_matrix": [
+    [
+      18836,
+      2784
+    ],
+    [
+      66,
+      3034
+    ]
+  ],
+  "contamination": 0.01,
+  "eval_score_mean": 0.4813347695201955,
+  "eval_score_std": 0.08962658815913413,
+  "f1": 0.6804216191971294,
+  "feature_columns": [
+    "sensor_11",
+    "sensor_4",
+    "sensor_13",
+    "sensor_8",
+    "sensor_17",
+    "sensor_3",
+    "sensor_2",
+    "sensor_9"
+  ],
+  "inference_ms_per_sample": 0.0020976419514271167,
+  "inference_seconds_total": 0.05185370903927833,
+  "n_estimators": 100,
+  "n_eval_samples": 24720,
+  "n_train_normal": 4250,
+  "pr_auc": 0.8822883255938053,
+  "precision": 0.5214850464077002,
+  "recall": 0.9787096774193549,
+  "roc_auc": 0.9802995434334995,
+  "threshold": 0.5456480745057056,
+  "threshold_percentile": 95.0,
+  "train_score_mean": 0.43719199995469665,
+  "train_score_std": 0.05380953173898749
+}

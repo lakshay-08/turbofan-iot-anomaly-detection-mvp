@@ -1,0 +1,460 @@
+{
+  "info": {
+    "_postman_id": "27384eeb-6c84-4149-94b5-78f1efa94e49",
+    "name": "Predictive Maintenance Platform APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection for the Turbofan anomaly detection backend and dashboard APIs. Update the baseUrl variable to match your local environment."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "jwtToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Metrics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/metrics",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "metrics"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const json = pm.response.json();",
+              "  pm.collectionVariables.set('jwtToken', json.access_token);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@turbofan.local\",\n  \"password\": \"admin123!\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Current user",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/me",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "me"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create user",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"operator@turbofan.local\",\n  \"password\": \"StrongPass!123\",\n  \"role\": \"operator\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/users",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "users"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Model info",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/model-info",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "model-info"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Predict single telemetry",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event_id\": \"b9da6ad2-9b83-4f4d-9a0d-3f49ec2a9d6b\",\n  \"engine_id\": 1,\n  \"timestamp\": \"2026-09-21T12:00:00Z\",\n  \"source\": \"postman\",\n  \"features\": {\n    \"sensor_11\": 47.3,\n    \"sensor_4\": 1396.84,\n    \"sensor_13\": 2388.01,\n    \"sensor_8\": 9062.17,\n    \"sensor_17\": 391.0,\n    \"sensor_3\": 1583.23,\n    \"sensor_2\": 642.36,\n    \"sensor_9\": 8145.32\n  },\n  \"metadata\": {\n    \"notes\": \"manual validation request\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/predict",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "predict"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Predict batch telemetry",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  {\n    \"engine_id\": 1,\n    \"features\": {\n      \"sensor_11\": 47.3,\n      \"sensor_4\": 1396.84,\n      \"sensor_13\": 2388.01,\n      \"sensor_8\": 9062.17,\n      \"sensor_17\": 391.0,\n      \"sensor_3\": 1583.23,\n      \"sensor_2\": 642.36,\n      \"sensor_9\": 8145.32\n    }\n  },\n  {\n    \"engine_id\": 2,\n    \"features\": {\n      \"sensor_11\": 46.8,\n      \"sensor_4\": 1392.10,\n      \"sensor_13\": 2387.55,\n      \"sensor_8\": 9058.22,\n      \"sensor_17\": 389.7,\n      \"sensor_3\": 1579.91,\n      \"sensor_2\": 640.88,\n      \"sensor_9\": 8141.03\n    }\n  }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/batch-predict",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "batch-predict"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Recent anomalies",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/recent-anomalies?limit=20",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "recent-anomalies"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "20"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Fleet overview metrics",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/metrics/overview",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "metrics",
+            "overview"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Engine list",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/engines",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "engines"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Engine details",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/engine/1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "engine",
+            "1"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Alerts",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/alerts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "alerts"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Simulator status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/simulator/status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "simulator",
+            "status"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Start simulator",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"engines\": 4,\n  \"interval\": 0.5\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/simulator/start",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "simulator",
+            "start"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Stop simulator",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/simulator/stop",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "simulator",
+            "stop"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Run simulator once",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/simulator/run-once",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "simulator",
+            "run-once"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
